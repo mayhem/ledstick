@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "hue.h"
+#include "animate.h"
 
 // Bit manipulation macros
 #define sbi(a, b) ((a) |= 1 << (b))       //sets bit B in variable A
@@ -134,7 +134,7 @@ uint8_t serial_rx(void)
     return UDR0;
 }
 
-void setup(void)
+void ledstick_setup(void)
 {
     // PD2 - pin 2 - clock
     // PD3 - pin 3 - signal
@@ -149,45 +149,6 @@ void setup(void)
     //TIMSK0 |= (1<<TOIE0);
 
     serial_init();
-}
-
-void on()
-{
-    uint8_t  i;
-
-    cbi(PORTD, CLOCK_PIN);
-    sbi(PORTD, DATA_PIN);
-    _delay_us(5);
-    for(i = 0; i < 200; i++)
-    {
-        sbi(PORTD, CLOCK_PIN);
-        _delay_us(5);
-
-        cbi(PORTD, CLOCK_PIN);
-        tbi(PORTD, DATA_PIN);
-        _delay_us(5);
-    }
-    _delay_us(500);
-    dprintf("done!\n");
-}
-
-void off()
-{
-    uint8_t  i;
-
-    cbi(PORTD, CLOCK_PIN);
-    cbi(PORTD, DATA_PIN);
-    _delay_us(5);
-    for(i = 0; i < 200; i++)
-    {
-        sbi(PORTD, CLOCK_PIN);
-        _delay_us(5);
-
-        cbi(PORTD, CLOCK_PIN);
-        _delay_us(5);
-    }
-    _delay_us(500);
-    dprintf("done!\n");
 }
 
 void set_led_colors(unsigned char leds[NUM_LED * 3])
@@ -215,97 +176,10 @@ void set_led_colors(unsigned char leds[NUM_LED * 3])
      _delay_us(COLOR_LATCH_DURATION);
 }
 
-void set_led_bork(uint8_t *data)
-{
-    uint8_t  i, index = 0, offset = 0;
-
-    cbi(PORTD, CLOCK_PIN);
-    cbi(PORTD, DATA_PIN);
-    _delay_us(5);
-    for(i = 0; i < NUM_DATA; i++)
-    {
-        if (data[index] & offset)
-            sbi(PORTD, DATA_PIN);
-        else
-            cbi(PORTD, DATA_PIN);
-
-        _delay_us(5);
-        sbi(PORTD, CLOCK_PIN);
-        _delay_us(5);
-
-        cbi(PORTD, CLOCK_PIN);
-
-        offset++;
-        if (offset == 8)
-        {
-            index++;
-            offset = 0;
-            if (index == NUM_DATA)
-                break;
-        }
-    }
-    cbi(PORTD, DATA_PIN);
-
-    for(i = 0; i < 10; i++)
-    {
-        _delay_us(5);
-        tbi(PORTD, CLOCK_PIN);
-    }
-    _delay_us(5);
-    cbi(PORTD, CLOCK_PIN);
-
-    _delay_ms(1);
-}
-
-void set_leds_int(uint8_t *data)
-{
-    uint8_t tr;
-
-    memcpy((void *)g_data, data, NUM_DATA);
-    g_transmit = 1;
-    for(;;)
-    {
-        cli();
-        tr = g_transmit;
-        sei();
-        if (!tr) 
-            break;
-    }
-    _delay_us(500);
-}
-
 int main(void)
 {
-    uint8_t  i, j;
-    color_t  c[NUM_LED];
-    uint8_t  d[NUM_DATA];
-
-    setup();
-    sei();
-
-    for(i = 0; i < 3; i++)
-    {
-        on();
-        _delay_ms(100);
-        off();
-        _delay_ms(100);
-    }
-
-    dprintf("ledstick hello!\n");
-    memset(d, 0, sizeof(d));
-    for(i = 128; i < 255; i++)
-    {
-        for(j = 0; j < NUM_LED; j++)
-        {
-            //color_hue(i, &c[j]);
-            //c[j].red = i;
-            //c[j].green = 0;
-            //c[j].blue = 0;
-            d[j * 3] = i;
-            d[j * 3 + 1] = i;
-            d[j * 3 + 2] = i;
-        }
-        set_led_colors((uint8_t *)&d);
-        _delay_ms(50);
-    }
+    ledstick_setup();
+    startup();
+    fade_in();
+    rainbow();
 }

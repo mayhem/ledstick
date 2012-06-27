@@ -4,8 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <bcm2835.h>
+#include <avr/delay.h>
 #include "hue.h"
 #include "ledstick.h"
 
@@ -25,10 +24,10 @@ void startup(void)
     for(i = 0; i < 3; i++)
     {
         set_led_colors(leds);
-        usleep(100000);
+        _delay_ms(100);
 
         set_led_colors(leds2);
-        usleep(100000);
+        _delay_ms(100);
     }
 }
 
@@ -49,7 +48,7 @@ void rainbow(void)
                 leds[(j * 3) + 2] = led.blue;
             }
             set_led_colors(leds);
-            usleep(10000);
+            _delay_ms(10);
         }
 }
 
@@ -67,11 +66,11 @@ void fade_in(void)
             leds[(j * 3) + 2] = i;
         }
         set_led_colors(leds);
-        usleep(10000);
+        _delay_us(10000);
     }
 }
 
-int main(int argc, char *argv[])
+int _main(int argc, char *argv[])
 {
     ledstick_setup();
     rainbow();
