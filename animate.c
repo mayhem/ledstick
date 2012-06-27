@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <avr/delay.h>
 #include "hue.h"
 #include "ledstick.h"
 
@@ -24,10 +23,10 @@ void startup(void)
     for(i = 0; i < 3; i++)
     {
         set_led_colors(leds);
-        _delay_ms(100);
+        sleep(100);
 
         set_led_colors(leds2);
-        _delay_ms(100);
+        sleep(100);
     }
 }
 
@@ -48,7 +47,7 @@ void rainbow(void)
                 leds[(j * 3) + 2] = led.blue;
             }
             set_led_colors(leds);
-            _delay_ms(10);
+            sleep(10);
         }
 }
 

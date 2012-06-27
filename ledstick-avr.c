@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "animate.h"
+#include "hue.h"
 
 // Bit manipulation macros
 #define sbi(a, b) ((a) |= 1 << (b))       //sets bit B in variable A
@@ -34,61 +34,11 @@
 // Time keeping
 static volatile uint32_t g_time = 0;
 
-// are we currently transmitting?
-static volatile uint8_t  g_transmit = 0;
+// what light pattern should we show now?
+static volatile uint8_t g_received = 0;
 
-
-// the data we're shifting out
-static volatile uint8_t  g_data_index = 0;
-static volatile uint8_t  g_clock_state = 1;
-static volatile uint8_t  g_data_byte_offset = 0;
-static volatile uint8_t  g_data[NUM_DATA];
-static volatile uint8_t  g_current_byte;
-
-// timer interrupt. 
-ISR (TIMER0_OVF_vect)
-{
-    g_time++;
-
-    if (!g_transmit)
-        return;
-
-    if (g_clock_state)
-    {
-        // set clock low
-        cbi(PORTD, CLOCK_PIN);
-
-        if (g_data_byte_offset == 0)
-        {
-            // Are we done?
-            if (g_data_index == NUM_DATA)
-            {
-                g_transmit = 0;
-//                g_data_index = 0;
-//                g_data_byte_offset = 0;
-                g_clock_state = 1;
-                // Set the clock to low
-                cbi(PORTD, CLOCK_PIN);
-                cbi(PORTB, 3);
-
-                //TODO: Set next row time
-                return;
-            }
-            g_current_byte = g_data[g_data_index++];
-        }
-        if (g_current_byte & (1 << (8 - g_data_byte_offset)))
-            sbi(PORTD, DATA_PIN);
-        else
-            cbi(PORTD, DATA_PIN);
-        g_data_byte_offset = (g_data_byte_offset + 1) % 8;
-        g_clock_state = 0;
-    }
-    else
-    {
-        g_clock_state = 1;
-        sbi(PORTD, CLOCK_PIN);
-    }
-}
+// some prototypes
+uint8_t should_break(void);
 
 void serial_init(void)
 {
@@ -99,6 +49,11 @@ void serial_init(void)
     UCSR0B = (1<<TXEN0) | (1<<RXEN0) | (1<<RXCIE0);
     /* Set frame format: 8data, 1stop bit */ 
     UCSR0C = (0<<USBS0)|(3<<UCSZ00); 
+}
+
+ISR(USART_RX_vect) 
+{ 
+    g_received = UDR0;
 }
 
 void serial_tx(uint8_t ch)
@@ -124,14 +79,6 @@ void dprintf(const char *fmt, ...)
         if (*ptr == '\n') serial_tx('\r');
         serial_tx(*ptr);
     }
-}
-
-uint8_t serial_rx(void)
-{
-    while ( !(UCSR0A & (1<<RXC0))) 
-          ;
-        
-    return UDR0;
 }
 
 void ledstick_setup(void)
@@ -176,10 +123,110 @@ void set_led_colors(unsigned char leds[NUM_LED * 3])
      _delay_us(COLOR_LATCH_DURATION);
 }
 
+void startup(void)
+{
+    int i;
+
+    unsigned char leds[NUM_LED * 3] = { 0xff, 0xff, 0x00, 
+                                        0xff, 0x00, 0xff,
+                                        0xff, 0xff, 0x00,
+                                        0xff, 0x00, 0xff };
+    unsigned char leds2[NUM_LED * 3] = { 0xff, 0x00, 0xff, 
+                                         0xff, 0xff, 0x00,
+                                         0xff, 0x00, 0xff,
+                                         0xff, 0xff, 0x00 };
+
+    for(i = 0; i < 3; i++)
+    {
+        set_led_colors(leds);
+        _delay_ms(100);
+
+        set_led_colors(leds2);
+        _delay_ms(100);
+    }
+}
+
+void rainbow(void)
+{
+    uint8_t i, j;
+    color_t led;
+    uint8_t leds[NUM_LED * 3];
+ 
+    for(; !should_break();)
+        for(i = 0; i < HUE_MAX && !should_break(); i++)
+        {
+            for(j = 0; j < NUM_LED; j++)
+            {
+                color_hue((i + j) % HUE_MAX, &led);
+                leds[(j * 3)] = led.red;
+                leds[(j * 3) + 1] = led.green;
+                leds[(j * 3) + 2] = led.blue;
+            }
+            set_led_colors(leds);
+            _delay_ms(10);
+        }
+}
+
+void fade_in(void)
+{
+    uint8_t i, j;
+    uint8_t leds[NUM_LED * 3];
+ 
+    for(i = 0; !should_break(); i++)
+    {
+        for(j = 0; j < NUM_LED; j++)
+        {
+            leds[(j * 3)] = i;
+            leds[(j * 3) + 1] = 0;
+            leds[(j * 3) + 2] = 0;
+        }
+        set_led_colors(leds);
+        _delay_ms(2);
+    }
+}
+
+uint8_t should_break(void)
+{
+    uint8_t r;
+
+    cli();
+    r = g_received;
+    sei();
+
+    return r;
+}
+
 int main(void)
 {
+    uint8_t ch;
+
     ledstick_setup();
+    dprintf("ledstick starting\n");
+    sei();
     startup();
-    fade_in();
-    rainbow();
+    for(;;)
+    {
+        ch = should_break();
+        if (ch)
+        {
+            cli();
+            g_received = 0;
+            sei();
+            dprintf("received '%d'\n", ch);
+        }
+        switch(ch)
+        {
+            case 'f':
+                dprintf("fade in\n");
+                fade_in();
+                break;
+
+            case 'r':
+            default:
+                dprintf("rainbow\n");
+                rainbow();
+                dprintf("post rainbow\n");
+                break;
+        }
+    }
 }
