@@ -5,14 +5,14 @@ INCLUDE	= -I/usr/local/include
 CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 
 LDFLAGS	= -L/usr/local/lib
-LIBS    = -lbcm2835 -lpthread -lrt
+LIBS    = -lrt
 
-SRC	= ledstick.c hue.c
+SRC	= ledstick.c hue.c gpio.c
 
 all:	ledstick
 clean:  
 	rm -f *.o ledstick
 
-ledstick: ledstick.o hue.o
+ledstick: ledstick.o hue.o gpio.o
 	$(CC) -o $@ ledstick.o $(LDFLAGS) $(LIBS)
 	

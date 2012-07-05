@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <bcm2835.h>
 #include "hue.c"
+#include "gpio.c"
 
 // pin definitions
 // Power: 5v at P1-02
@@ -14,22 +15,24 @@
 // Data:        P1-
 // Clock:       P1-
 
-#define DATA_PIN  RPI_GPIO_P1_21
-#define CLOCK_PIN RPI_GPIO_P1_23
+#define DATA_PIN  9
+#define CLOCK_PIN 11
 
 #define NUM_LED              4
 #define COLOR_LATCH_DURATION 501
 
 void setup(void)
 {
-    if (!bcm2835_init())
-	return;
+    setup_io();
 
-    bcm2835_gpio_fsel(DATA_PIN, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(CLOCK_PIN, BCM2835_GPIO_FSEL_OUTP);
+    INP_GPIO(DATA_PIN); // must use INP_GPIO before we can use OUT_GPIO
+    OUT_GPIO(DATA_PIN);
+
+    INP_GPIO(CLOCK_PIN); // must use INP_GPIO before we can use OUT_GPIO
+    OUT_GPIO(CLOCK_PIN);
 
     // Reset the LED chain
-    bcm2835_gpio_write(CLOCK_PIN, 0);
+    GPIO_CLR = 1<<CLOCK_PIN;
     usleep(COLOR_LATCH_DURATION);
 }
 
@@ -43,13 +46,16 @@ void set_led_colors(unsigned char leds[NUM_LED * 3])
                 byte = leds[(l * 3) + c];
                 for(i = 0; i < 8; i++)
                 {
-                    bcm2835_gpio_write(DATA_PIN, byte & (1 << (8 - i)));
+                    if (byte & (1 << (8 - i)))
+                        GPIO_SET = 1 << DATA_PIN;
+                    else
+                        GPIO_CLR = 1 << DATA_PIN;
                     usleep(50);
 
-                    bcm2835_gpio_write(CLOCK_PIN, 1);
+                    GPIO_SET = 1 << CLOCK_PIN;
                     usleep(50);
 
-                    bcm2835_gpio_write(CLOCK_PIN, 0);
+                    GPIO_CLR = 1 << CLOCK_PIN;
                 }
             }
      usleep(COLOR_LATCH_DURATION);
