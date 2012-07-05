@@ -15,8 +15,8 @@
 // Data:        P1-
 // Clock:       P1-
 
-#define DATA_PIN  9
-#define CLOCK_PIN 11
+#define DATA_PIN  8
+#define CLOCK_PIN 7  
 
 #define NUM_LED              4
 #define COLOR_LATCH_DURATION 501
@@ -104,7 +104,7 @@ void rainbow(void)
         {
             for(j = 0; j < NUM_LED; j++)
             {
-                color_hue(i + j, &led);
+                color_hue((i + j) % HUE_MAX, &led);
                 leds[(j * 3)] = led.red;
                 leds[(j * 3) + 1] = led.green;
                 leds[(j * 3) + 2] = led.blue;
