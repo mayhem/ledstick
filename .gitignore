@@ -1,2 +1,4 @@
 *.o
-ledstick
+ledstick-ani
+ledstick-clear
+ledstick-set

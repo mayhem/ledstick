@@ -7,12 +7,15 @@ CFLAGS	= $(DEBUG) -Wall $(INCLUDE) -Winline -pipe
 LDFLAGS	= -L/usr/local/lib
 LIBS    = -lrt
 
-SRC	= ledstick.c hue.c gpio.c
-
-all:	ledstick
+all:	ledstick-ani ledstick-set ledstick-clear
 clean:  
-	rm -f *.o ledstick
+	rm -f *.o ledstick-ani ledstick
 
-ledstick: ledstick.o hue.o gpio.o
-	$(CC) -o $@ ledstick.o $(LDFLAGS) $(LIBS)
+ledstick-ani: animate.o ledstick.o hue.o gpio.o 
+	$(CC) -o $@ animate.o ledstick.o hue.o gpio.o $(LDFLAGS) $(LIBS)
+
+ledstick-clear: clear.o ledstick.o hue.o gpio.o
+	$(CC) -o $@ clear.o ledstick.o hue.o gpio.o $(LDFLAGS) $(LIBS)
 	
+ledstick-set: set.o ledstick.o hue.o gpio.o
+	$(CC) -o $@ set.o ledstick.o hue.o gpio.o $(LDFLAGS) $(LIBS)
