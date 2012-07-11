@@ -10,7 +10,7 @@ $(TARGET).hex: $(TARGET).obj
 	$(OBJ2HEX) -R .eeprom -O ihex $< $@
 
 $(TARGET).obj: $(TARGET).o hue.o 
-	$(CC) $(CFLAGS) -o $@ -Wl,-Map,$(TARGET).map $(TARGET).o hue.o 
+	$(CC) $(CFLAGS) -o $@ -Wl,-Map,$(TARGET).map $(TARGET).o hue.o -lm
 
 clean:
 	rm -f *.hex *.obj *.o *.map

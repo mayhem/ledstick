@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <math.h>
 
 #include <stddef.h>
 #include <math.h>
@@ -28,8 +29,8 @@
 
 #define COLOR_LATCH_DURATION 501
 #define CLOCK_PERIOD 100
-#define CLOCK_PIN 2
-#define DATA_PIN 3
+#define CLOCK_PIN 0
+#define DATA_PIN 1
 
 // Time keeping
 static volatile uint32_t g_time = 0;
@@ -83,19 +84,44 @@ void dprintf(const char *fmt, ...)
 
 void ledstick_setup(void)
 {
-    // PD2 - pin 2 - clock
-    // PD3 - pin 3 - signal
-    DDRD |= (1<<PD2)|(1<<PD3);
+    // PC0 - pin a0 - clock
+    // PC1 - pin a1 - signal
+    DDRC |= (1<<PC0)|(1<<PC1);
+
+    // Set PWM pins as outputs
+    DDRD |= (1<<PD6)|(1<<PD5)|(1<<PD3);
 
     // on board LED
     DDRB |= (1<<PB5);
 
-    // Timer setup for clock 
-    TCCR0B |= _BV(CS00); // clock / 256 = 16us
-    //TCCR0B |= _BV(CS02) | _BV(CS00); // clock / 1024 / 256 = 16us
-    //TIMSK0 |= (1<<TOIE0);
-
     serial_init();
+
+    /* Set to Fast PWM */
+    TCCR0A |= _BV(WGM01) | _BV(WGM00);
+    TCCR2A |= _BV(WGM21) | _BV(WGM20);
+
+    // Set the compare output mode
+    TCCR0A |= _BV(COM0A1);
+    TCCR0A |= _BV(COM0B1);
+    TCCR2A |= _BV(COM2B1);
+
+    // Reset timers and comparators
+    OCR0A = 0;
+    OCR0B = 0;
+    OCR2B = 0;
+    TCNT0 = 0;
+    TCNT2 = 0;
+
+    // Set the clock source
+    TCCR0B |= _BV(CS00);
+    TCCR2B |= _BV(CS20);
+}
+
+void set_pwm_colors(color_t *c)
+{
+    OCR2B = 255 - c->red;
+    OCR0A = 255 - c->blue;
+    OCR0B = 255 - c->green;
 }
 
 void set_led_colors(unsigned char leds[NUM_LED * 3])
@@ -109,15 +135,15 @@ void set_led_colors(unsigned char leds[NUM_LED * 3])
                 for(i = 0; i < 8; i++)
                 {
                     if (byte & (1 << (8 - i)))
-                        sbi(PORTD, DATA_PIN);
+                        sbi(PORTC, DATA_PIN);
                     else
-                        cbi(PORTD, DATA_PIN);
+                        cbi(PORTC, DATA_PIN);
                     _delay_us(CLOCK_PERIOD);
 
-                    sbi(PORTD, CLOCK_PIN);
+                    sbi(PORTC, CLOCK_PIN);
                     _delay_us(CLOCK_PERIOD);
 
-                    cbi(PORTD, CLOCK_PIN);
+                    cbi(PORTC, CLOCK_PIN);
                 }
             }
      _delay_us(COLOR_LATCH_DURATION);
@@ -185,6 +211,40 @@ void fade_in(void)
     }
 }
 
+void green_wobble(uint8_t t, color_t *c)
+{
+    c->green =  (int)((sin((float)t / M_PI_2) + 1.0) * 128);
+    c->blue = c->red = 0;
+}
+
+void wobble_wobble(uint8_t t, color_t *c)
+{
+    c->red =  (int)((sin((float)t / M_PI_2) + 1.0) * 128);
+    c->green = 0;
+    c->blue =  (int)((cos((float)t / M_PI_2) + 1.0) * 128);
+}
+
+void plot_function(uint8_t delay, void (*func)(uint8_t, color_t *))
+{
+    uint8_t i, j;
+    uint8_t leds[NUM_LED * 3];
+    color_t c;
+ 
+    for(i = 0; !should_break(); i++)
+    {
+        func(i, &c);
+        for(j = 0; j < NUM_LED; j++)
+        {
+            leds[(j * 3)] = c.red;
+            leds[(j * 3) + 1] = c.green;
+            leds[(j * 3) + 2] = c.blue;
+        }
+        set_led_colors(leds);
+        set_pwm_colors(leds[0]);
+        _delay_ms(delay);
+    }
+}
+
 uint8_t should_break(void)
 {
     uint8_t r;
@@ -216,16 +276,20 @@ int main(void)
         }
         switch(ch)
         {
-            case 'f':
-                dprintf("fade in\n");
-                fade_in();
+            case 'd':
+                dprintf("Drink done\n");
+                plot_function(3, &green_wobble);
                 break;
 
-            case 'r':
+            case 'p':
+                dprintf("Pour drink\n");
+                plot_function(10, &wobble_wobble);
+                break;
+
+            case 'i':
             default:
-                dprintf("rainbow\n");
+                dprintf("idle\n");
                 rainbow();
-                dprintf("post rainbow\n");
                 break;
         }
     }
