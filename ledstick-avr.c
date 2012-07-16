@@ -24,7 +24,7 @@
 #define TIMER0_INIT 235 // 20 ticks before it overflows
 #define DEBUG 0
 
-#define NUM_LED 4
+#define NUM_LED 10
 #define NUM_DATA (NUM_LED * 3)
 
 #define COLOR_LATCH_DURATION 501
@@ -40,6 +40,8 @@ static volatile uint8_t g_received = 0;
 
 // some prototypes
 uint8_t should_break(void);
+
+#define DEBUG 1
 
 void serial_init(void)
 {
@@ -73,6 +75,8 @@ void dprintf(const char *fmt, ...)
     va_start (va, fmt);
     char buffer[MAX];
     char *ptr = buffer;
+
+#if DEBUG
     vsnprintf(buffer, MAX, fmt, va);
     va_end (va);
     for(ptr = buffer; *ptr; ptr++)
@@ -80,6 +84,7 @@ void dprintf(const char *fmt, ...)
         if (*ptr == '\n') serial_tx('\r');
         serial_tx(*ptr);
     }
+#endif
 }
 
 void ledstick_setup(void)
@@ -94,34 +99,9 @@ void ledstick_setup(void)
     // on board LED
     DDRB |= (1<<PB5);
 
+#if DEBUG
     serial_init();
-
-    /* Set to Fast PWM */
-    TCCR0A |= _BV(WGM01) | _BV(WGM00);
-    TCCR2A |= _BV(WGM21) | _BV(WGM20);
-
-    // Set the compare output mode
-    TCCR0A |= _BV(COM0A1);
-    TCCR0A |= _BV(COM0B1);
-    TCCR2A |= _BV(COM2B1);
-
-    // Reset timers and comparators
-    OCR0A = 0;
-    OCR0B = 0;
-    OCR2B = 0;
-    TCNT0 = 0;
-    TCNT2 = 0;
-
-    // Set the clock source
-    TCCR0B |= _BV(CS00);
-    TCCR2B |= _BV(CS20);
-}
-
-void set_pwm_colors(color_t *c)
-{
-    OCR2B = 255 - c->red;
-    OCR0A = 255 - c->blue;
-    OCR0B = 255 - c->green;
+#endif
 }
 
 void set_led_colors(unsigned char leds[NUM_LED * 3])
@@ -240,8 +220,7 @@ void plot_function(uint8_t delay, void (*func)(uint8_t, color_t *))
             leds[(j * 3) + 2] = c.blue;
         }
         set_led_colors(leds);
-        set_pwm_colors(leds[0]);
-        _delay_ms(delay);
+        _delay_ms(10);
     }
 }
 
@@ -262,7 +241,8 @@ int main(void)
 
     ledstick_setup();
     dprintf("ledstick starting\n");
-    sei();
+for(;;);
+
     startup();
     for(;;)
     {
@@ -278,7 +258,7 @@ int main(void)
         {
             case 'd':
                 dprintf("Drink done\n");
-                plot_function(3, &green_wobble);
+                plot_function(0, &green_wobble);
                 break;
 
             case 'p':
