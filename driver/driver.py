@@ -8,7 +8,16 @@ import struct
 from time import sleep, time
 from struct import pack, unpack
 
-BAUD_RATE = 115200
+BAUD_RATE = 57600
+
+def crc16_update(crc, a):
+    crc ^= a
+    for i in xrange(0, 8):
+        if crc & 1:
+            crc = (crc >> 1) ^ 0xA001
+        else:
+            crc = (crc >> 1)
+    return crc
 
 class Driver(object):
 
@@ -61,27 +70,72 @@ class Driver(object):
         except serial.serialutil.SerialException:
             raise SerialIOError
 
-        sleep(4)
+        self.ser.flush()
+        sleep(3)
 
     def send_image(self, w, h, d, pixels):
-        print "write image: %d" % len(pixels)
-        self.ser.write(struct.pack("<BBH", w, h, d))
-        for i, p in enumerate(pixels):
-            print "%d" % i
-            self.ser.write(p)
-            sleep(.01)
+        self.ser.flush()
+        header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
+        crc = 0
+        packet = struct.pack("<HHH", w, h, d) + pixels
+        print "total: %d" % len(packet)
+        for ch in packet:
+            crc = crc16_update(crc, ord(ch))
 
-r=png.Reader(file=open('tv-test-pattern-tiny.png'))
-data = r.read()
-x = data[0]
-y = data[1]
-bits = data[2]
+        print "crc: %x" % crc
 
+        packet = pack("<I", len(packet)) + packet + pack("<H", crc)
+
+        for i, ch in enumerate(packet):
+            print "%d: %0x" % (i ,ord(ch))
+
+        packet = chr(0) + chr(0) + header + packet
+        for ch in packet:
+            self.ser.write(ch)
+            sleep(.002)
+
+#        while True:
+#            sent = self.ser.write(packet)
+#            if sent != len(packet):
+#                print "Sent %d of %d bytes" % (sent, len)
+#            ack = self.ser.read(1)
+#            if ack: 
+#                print "image sent ok"
+#                break
+#            if not ack:
+#                print "timeout"
+#            else:
+#                print "Received ack: %d" % ord(ack)
+
+def read_image(image_file):
+    r=png.Reader(file=open(image_file))
+    data = r.read()
+    x = data[0]
+    y = data[1]
+
+    pixels = ""
+    for row in data[2]:
+        pixels += row.tostring()
+
+    return (x, y, pixels)
+
+if len(sys.argv) < 1:
+    print "Usage: %s <serial device>" % sys.argv[0]
+    sys.exit(1)
+
+width = 20
+height = 20
 pixels = ""
-for row in data[2]:
-    pixels += row.tostring()
+for y in xrange(height):
+    row = ""
+    for x in xrange(width):
+        if ((x + y) % 2 == 0):
+            row += chr(255) + chr(255) + chr(0)
+        else:
+            row += chr(255) + chr(0) + chr(255)
+    pixels += row
 
 num_leds = 72
-driver = Driver("/dev/tty.usbmodemfd121", num_leds, 0)
+driver = Driver(sys.argv[1], num_leds, 0)
 driver.open()
-driver.send_image(x, y, 100, pixels)
+driver.send_image(width, height, 100, pixels)
