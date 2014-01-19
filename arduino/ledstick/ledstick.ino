@@ -11,10 +11,13 @@
 //   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip)
 
 #include "ledstick.h" 
-#include "ord_camp_img.h"
+#include "image_144.h"
+
+#define DEVICE_HEIGHT 144
 
 // bitmap stuff
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(height, 2, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(DEVICE_HEIGHT, 2, NEO_GRB + NEO_KHZ800);
+
 
 // Time keeping
 Timer t;
@@ -32,17 +35,17 @@ void startup(void)
     color_t col1 = { 128, 70, 0 };
     color_t col2 = { 128, 0, 128 };
 
-    for(i = 0; i < 5; i++)
+    for(i = 0; i < 30; i++)
     {
-        for(j = 0; j < MAX_HEIGHT; j++)
+        for(j = 0; j < DEVICE_HEIGHT; j++)
         {
-            if ((i + j) % 2 == 0)
+            if (((i/4) + (j/4)) % 2 == 0)
                 strip.setPixelColor(j, col1.r, col1.g, col1.b);
             else
                 strip.setPixelColor(j, col2.r, col2.g, col2.b);
         }   
         strip.show();
-        delay(150);
+        delay(100);
     }
     set_color(0, 0, 0);
 }
@@ -51,7 +54,7 @@ void set_color(uint8_t r, uint8_t g, uint8_t b)
 {
     uint8_t j;
     
-    for(j = 0; j < MAX_HEIGHT; j++)
+    for(j = 0; j < DEVICE_HEIGHT; j++)
         strip.setPixelColor(j, r, g, b);
     strip.show();
 }
@@ -69,7 +72,7 @@ void show_col(uint16_t col)
         red = pgm_read_byte_near(palette + ((uint16_t)pixel * 3));
         green = pgm_read_byte_near(palette + ((uint16_t)pixel * 3) + 1);
         blue = pgm_read_byte_near(palette + ((uint16_t)pixel * 3) + 2);
-        strip.setPixelColor(height - row, red / 2, green / 2, blue / 2); 
+        strip.setPixelColor(height - row, red / 3, green / 3, blue / 3); 
     }
     strip.show(); 
 }
@@ -92,6 +95,7 @@ void loop()
     
     show_col(col);
     col++;
+    delay(5);
     if (col == width)
     {
         set_color(0, 0, 0);
