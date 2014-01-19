@@ -78,34 +78,27 @@ class Driver(object):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
         crc = 0
         packet = struct.pack("<HHH", w, h, d) + pixels
-        print "total: %d" % len(packet)
         for ch in packet:
             crc = crc16_update(crc, ord(ch))
 
-        print "crc: %x" % crc
-
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
-
-        for i, ch in enumerate(packet):
-            print "%d: %0x" % (i ,ord(ch))
-
         packet = chr(0) + chr(0) + header + packet
-        for ch in packet:
-            self.ser.write(ch)
-            sleep(.002)
 
-#        while True:
+        while True:
+            for ch in packet:
+                self.ser.write(ch)
+                sleep(.002)
 #            sent = self.ser.write(packet)
 #            if sent != len(packet):
 #                print "Sent %d of %d bytes" % (sent, len)
-#            ack = self.ser.read(1)
-#            if ack: 
-#                print "image sent ok"
-#                break
-#            if not ack:
-#                print "timeout"
-#            else:
-#                print "Received ack: %d" % ord(ack)
+            ack = self.ser.read(1)
+            if ack: 
+                print "image sent ok"
+                break
+            if not ack:
+                print "timeout"
+            else:
+                print "Received ack: %d" % ord(ack)
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
@@ -138,4 +131,6 @@ for y in xrange(height):
 num_leds = 72
 driver = Driver(sys.argv[1], num_leds, 0)
 driver.open()
-driver.send_image(width, height, 100, pixels)
+while(True):
+    driver.send_image(width, height, 100, pixels)
+    sleep(1)

@@ -109,12 +109,13 @@ int receive_char(char ch, bitmap_t &bitmap)
  
     if (num_received == 4) //sizeof(bitmap.len))
     {
-       Serial.print("bitmap.len ");
-       Serial.println(bitmap.len, DEC);
+       //Serial.print("bitmap.len ");
+       //Serial.println(bitmap.len, DEC);
        if (bitmap.len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
            ptr = NULL;
+           Serial.write("\0x00");
            return RECEIVE_ABORT_PACKET;
        }
        
@@ -136,18 +137,80 @@ int receive_char(char ch, bitmap_t &bitmap)
        for(i = 0, crc_ptr = (char *)&bitmap.w; i < bitmap.len; i++, crc_ptr++)
            crc = crc16_update(crc, *crc_ptr);
        
-       Serial.print("sent crc ");
-       Serial.println(sent_crc, HEX);
-       Serial.print("     crc ");
-       Serial.println(crc, HEX);
+       //Serial.print("sent crc ");
+       //Serial.println(sent_crc, HEX);
+       //Serial.print("     crc ");
+       //Serial.println(crc, HEX);
            
        if (crc != sent_crc)
+       {
+           Serial.write("0x00");
            return RECEIVE_ABORT_PACKET_CRC;
+       }
        
+       Serial.write("0x01");
        return RECEIVE_PACKET_COMPLETE;
     } 
   
     return RECEIVE_OK;
+}
+
+void SerialEvent()
+{
+    while (Serial.available() > 0) 
+    {
+        ch = Serial.read();
+        if (ch < 0)
+            break;
+            
+        if (header_count < HEADER_LEN)
+        {
+            //Serial.print(" hdr: ");
+            //Serial.print(header_count, DEC);
+            //Serial.print(" ");  
+            //Serial.println(ch, HEX); 
+            if (ch == header[header_count])
+            {
+                header_count++;
+                if (header_count == HEADER_LEN)
+                    set_color(0, 0, 0);
+                continue;
+            }
+            header_count = 0;
+            continue;
+        }
+        if (header_count == HEADER_LEN)
+            timeout = ticks + 1000;
+            
+        if (timeout && timeout < ticks)
+        {
+            timeout = 0;
+            num_received = 0;
+            //Serial.println("timeout!");
+            continue;
+        }
+          
+        ret = receive_char(ch, bitmap0);
+        if (ret == RECEIVE_ABORT_PACKET)
+        {
+            set_color(255, 0, 0);
+            header_count = 0;
+            continue;
+        }
+        if (ret == RECEIVE_ABORT_PACKET_CRC)
+        {
+            set_color(0, 0, 255);
+            header_count = 0;
+            continue;
+        }
+        if (ret == RECEIVE_PACKET_COMPLETE)
+        {
+            // use bitmap & swap in bitmap here
+            set_color(0, 255, 0);
+            header_count = 0;
+        }   
+    }
+    return;
 }
 
 void setup() 
@@ -179,61 +242,8 @@ void loop()
         load_bitmap = &bitmap0;
         active_bitmap = &bitmap1;
     }
-    while (Serial.available() > 0) 
-    {
-        ch = Serial.read();
-        if (ch < 0)
-            break;
-            
-        if (header_count < HEADER_LEN)
-        {
-            Serial.print(" hdr: ");
-            Serial.print(header_count, DEC);
-            Serial.print(" ");  
-            Serial.println(ch, HEX); 
-            if (ch == header[header_count])
-            {
-                header_count++;
-                if (header_count == HEADER_LEN)
-                    set_color(0, 0, 0);
-                continue;
-            }
-            header_count = 0;
-            continue;
-        }
-        if (header_count == HEADER_LEN)
-            timeout = ticks + 1000;
-            
-        if (timeout && timeout < ticks)
-        {
-            timeout = 0;
-            num_received = 0;
-            Serial.println("timeout!");
-            continue;
-        }
-          
-        ret = receive_char(ch, bitmap0);
-        if (ret == RECEIVE_ABORT_PACKET)
-        {
-            set_color(255, 0, 0);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_ABORT_PACKET_CRC)
-        {
-            set_color(0, 0, 255);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_PACKET_COMPLETE)
-        {
-            // use bitmap & swap in bitmap here
-            set_color(0, 255, 0);
-            header_count = 0;
-        }   
-    }
+
     return;
-    
     if (target == 0)
         target = ticks;
         
