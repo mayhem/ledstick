@@ -1,10 +1,6 @@
 #define MAX_WIDTH  72
 #define MAX_HEIGHT 72
 
-// BITMAP header does NOT include the 2 byte size!
-#define BITMAP_HEADER_SIZE (sizeof(uint32_t) + (sizeof(uint16_t) * 3))
-#define MAX_PACKET_PAYLOAD (BITMAP_HEADER_SIZE + (MAX_WIDTH * MAX_HEIGHT * 3)) 
-
 #define RECEIVE_OK               0
 #define RECEIVE_ABORT_PACKET     1
 #define RECEIVE_ABORT_PACKET_CRC 2
@@ -17,8 +13,9 @@ struct color_t
 
 struct bitmap_t
 {
-  uint32_t  len;
-  uint16_t  w, h;
-  uint16_t  col_delay;
-  color_t   pixels[MAX_HEIGHT * MAX_WIDTH];
+  uint16_t     width, height;
+  uint16_t     col_delay;
+  const prog_uchar  *pixels;
+  const prog_uchar  *palette;
 }; 
+
