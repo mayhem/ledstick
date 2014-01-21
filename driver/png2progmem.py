@@ -21,35 +21,27 @@ def load_files(file_list):
         for row in data[2]:
             pixels += row.tostring()
 
-        list.append({ 'width' : width, 'height' : height, 'pixels' : pixels, 'palette' : r.palette() })
+        list.append({ 'width' : width, 'height' : height, 'pixels' : pixels })
     return list
 
 def print_image_file(img, index):
     width = img['width']
     height = img['height']
     pixels = img['pixels']
-    palette = img['palette']
 
     print "const uint16_t width_%d = %d;" % (index, width)
     print "const uint16_t height_%d = %d;" % (index, height)
-    print "const prog_uchar image_%d[%d] PROGMEM = {" % (index, width * height)
+    print "const prog_uchar image_%d[%d] PROGMEM = {" % (index, width * height * 3)
     for x in xrange(width):
         line = "  "
         for y in xrange(height):
-            line += "%3d," % ord(pixels[y * width + x])
+            line += "%3d," % ord(pixels[y * width * 3 + (x * 3)])
+            line += "%3d," % ord(pixels[y * width * 3 + (x * 3) + 1])
+            line += "%3d," % ord(pixels[y * width * 3 + (x * 3) + 2])
         if y == width - 1:
             line = line[:len(line)-1]
         print line
 
-    print "};"
-
-    print "const prog_uchar palette_%d[%d] PROGMEM = {" % (index, 3 * len(palette))
-    for i, color in enumerate(palette):
-        print "   %3d, %3d, %3d" % (color[0], color[1], color[2]),
-        if i != len(palette) - 1:
-            print ","
-        else:
-            print
     print "};"
 
 def print_lookup_table(list):
@@ -57,7 +49,7 @@ def print_lookup_table(list):
     print "bitmap_t bitmaps[num_bitmaps] = "
     print "{"
     for i, img in enumerate(list):
-        print "   { width_%d, height_%d, 5, image_%d, palette_%d }," % (i, i, i, i)
+        print "   { width_%d, height_%d, 5, image_%d }," % (i, i, i)
     print "};"
 
 if len(sys.argv) < 1:

@@ -16,6 +16,5 @@ struct bitmap_t
   uint16_t     width, height;
   uint16_t     col_delay;
   const prog_uchar  *pixels;
-  const prog_uchar  *palette;
 }; 
 
