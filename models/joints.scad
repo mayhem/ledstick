@@ -29,11 +29,12 @@ module end_cap(r)
 	{
     		difference()
 		{
-    			sphere(r, $fn=10);
-        		translate([0, 0, r]) 
-        			u_shape(r);
+    			sphere(r, $fn=100);
+        		translate([0, 0, r - 8]) 
+        			u_shape(2 * r);
 		}
-		//translate([0,0,-r])
+        // cut plate
+		translate([0,0,25])
 			cube([r * 2, r * 2, r], center=true);
     }
 }
