@@ -13,7 +13,7 @@ o_thickness = 3;
 //test_base();
 //u_shape(o_thickness);
 //end_cap(20);
-center_joint(40);
+center_joint(30);
 
 module center_joint(r)
 {
@@ -31,26 +31,26 @@ module center_joint(r)
 						sphere(r, $fn=200);
 						// cut out first leg
 						rotate([60, 0, 0])
-							translate([0,0,r-5])
-								u_shape(r);
+							translate([0,0,r-10])
+								u_shape(r-11.0);
 					}
 					// cut out second leg
 					rotate([60, 0, 120])
-						translate([0,0,r-5])
-							u_shape(r);
+						translate([0,0,r-10])
+							u_shape(r-11.0);
 				}
 				// cut third leg
 				rotate([60, 0, 240])
-					translate([0,0,r-5])
-						u_shape(r);
+					translate([0,0,r-10])
+						u_shape(r-11.0);
 	    		}
 			// cut out top 
 			rotate([180, 0, 0])
-				translate([0,0,r-5])
+				translate([0,0,r-8])
 					u_shape(r);
 		}
         // cut plate for a flat bottom
-		translate([0,0,55])
+		translate([0,0,41])
 			cube([r * 2, r * 2, r], center=true);
     }
 }
