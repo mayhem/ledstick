@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{{ title }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
+  </head>
+  <body>
+    <nav class="navbar navbar-default" role="navigation">
+      <div class="container-fluid">
+          <ul class="nav navbar-nav">
+              <li><a href="/" class="slim-nav-item">home</a></li>
+              <li><a href="/upload" class="slim-nav-item">upload</a></li>
+              <li><a href="/images" class="slim-nav-item">images</a></li>
+              <li><a href="/chill" class="slim-nav-item">chill</a></li>
+          </ul>
+      </div>
+    </nav>
+    <div class="container-fluid">
+       {% block body %}{% endblock %}
+    </div>
+  </body>
+</html>

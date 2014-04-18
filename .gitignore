@@ -2,7 +2,4 @@
 *.hex
 *.map
 *.obj
-ledstick-ani
-ledstick-clear
-ledstick-set
-Makefile
+*.swp
