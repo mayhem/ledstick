@@ -1,5 +1,5 @@
-ledstick
-========
+Das Blinkenstick
+================
 
 This repo contains the software for my LED Stick POV project. 
 
