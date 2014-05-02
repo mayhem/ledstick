@@ -1,11 +1,25 @@
 {% extends 'layout' %}
 {% block body %}
 <link rel="stylesheet" type="text/css" href="/static/css/dropzone.css">
-<div>
-<form id="dropzone" action="/ws/upload" class="dropzone"></form>
+<div style="text-align: center">
+<button id="upload" class="btn btn-primary btn-lg dropzone-btn">
+Upload an image
+</button>
 </div>
+<div id="upload-preview" class="dropzone-previews">
+</div>
+
 <script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
 <script type="text/javascript" src="/static/js/dropzone.min.js"></script>
 <script type="text/javascript">
+$(document).ready(function() {
+    dropzone = new Dropzone("#upload", { 
+          paramName: "file", 
+          url:"/ws/upload",
+          maxFilesize: 5, // MB
+          acceptedFiles : "image/png,image/jpeg,image/gif",
+          previewsContainer : "#upload-preview",
+    });
+});
 </script>
 {% endblock %}

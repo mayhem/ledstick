@@ -61,7 +61,9 @@
 }
 .dropzone .dz-preview .dz-details img,
 .dropzone-previews .dz-preview .dz-details img {
-  absolute: top left;
+  position: absolute; 
+  top: 0px; 
+  left: 0px;
   width: 100px;
   height: 100px;
 }

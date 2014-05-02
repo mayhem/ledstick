@@ -3,11 +3,12 @@
 import os
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import BadRequest
 
 STATIC_PATH = "/static"
 STATIC_FOLDER = "../static"
 TEMPLATE_FOLDER = "../templates"
-UPLOAD_FOLDER = '/var/images'
+UPLOAD_FOLDER = '../images'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 app = Flask(__name__,
@@ -32,7 +33,7 @@ def images():
     return render_template("index")
 
 @app.route("/chill")
-def images():
+def chill():
     return render_template("index")
 
 @app.route("/ws/upload", methods=['POST'])
@@ -42,6 +43,7 @@ def ws_upload():
         filename = secure_filename(file.filename)
         file.save(os.path.join(UPLOAD_FOLDER, filename))
         return ""
+    raise BadRequest("Unsupported file type")
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8080)
