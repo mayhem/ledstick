@@ -2,7 +2,6 @@
 {% block body %}
 <div>
     <div id="images">
-    <div id="images">
        {% for url in urls %}
            <div class="image">
                <img class="image" src="{{ url }}"></img>
