@@ -8,7 +8,7 @@ from werkzeug.exceptions import BadRequest
 STATIC_PATH = "/static"
 STATIC_FOLDER = "../static"
 TEMPLATE_FOLDER = "../templates"
-UPLOAD_FOLDER = '../images'
+UPLOAD_FOLDER = '../static/uploads'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
 app = Flask(__name__,
@@ -28,9 +28,32 @@ def index():
 def upload():
     return render_template("upload")
 
+def get_image_url(index):
+    files = [ f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER,f)) ]
+    if index >= len(files):
+        return "", len(files)
+    return "/static/uploads/" + files[index], len(files)
+
 @app.route("/images")
 def images():
-    return render_template("index")
+    url, count = get_image_url(0)
+    if count > 1:
+        next_index = 1
+    else:
+        next_index = 0
+    print "images next: %d" % next_index
+    return render_template("images", image_url=url, next_index=index)
+
+@app.route("/image/<int:index>")
+def image(index):
+    url, count = get_image_url(index)
+    print count
+    if index < count - 1:
+        next_index = index + 1
+    else:
+        next_index = 0
+    print "image %s next: %d" % (index, next_index)
+    return render_template("image", image_url=url, next_index=next_index)
 
 @app.route("/chill")
 def chill():

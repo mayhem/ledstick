@@ -1,0 +1,17 @@
+{% extends 'layout' %}
+{% block body %}
+<div>
+    <div id="images">
+       <div class="image">
+       {% if image_url %}
+           <img class="image" src="{{ image_url }}"></div>
+       {% endif %}
+       </div>
+    </div>
+    {% if next_index > 0 %}
+        <div id="pagination">
+            <a href="/image/{{ next_index }}" class="next">next</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

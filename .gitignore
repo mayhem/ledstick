@@ -3,3 +3,4 @@
 *.map
 *.obj
 *.swp
+.DS_Store

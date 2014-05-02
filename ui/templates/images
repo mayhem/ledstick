@@ -1,0 +1,36 @@
+{% extends 'layout' %}
+{% block body %}
+<div>
+    <div id="images">
+       <div class="image">
+       {% if image_url %}
+           <img class="image"src="{{ image_url }}">
+       {% else %}
+           No images have been uploaded.
+       {% endif %}
+       </div>
+    </div>
+
+    {% if next_index > 0 %}
+        <div id="pagination">
+            <a href="/image/1" class="next">next</a>
+        </div>
+    {% endif %}
+</div>
+<script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery-ias.min.js"></script>
+<script type="text/javascript">
+
+$(document).ready(function() {
+   var ias = jQuery.ias({
+                  container:  '#images',
+                  item:       '.image',
+                  pagination: '#pagination',
+                  next:       '.next'
+   });
+   ias.extension(new IASSpinnerExtension({
+               src: '/static/images/spinner.gif'
+   }));
+});
+</script>
+{% endblock %}

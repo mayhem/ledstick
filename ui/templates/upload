@@ -2,11 +2,11 @@
 {% block body %}
 <link rel="stylesheet" type="text/css" href="/static/css/dropzone.css">
 <div style="text-align: center">
-<button id="upload" class="btn btn-primary btn-lg dropzone-btn">
-Upload an image
-</button>
-</div>
-<div id="upload-preview" class="dropzone-previews">
+    <button id="upload" class="btn btn-primary btn-lg dropzone-btn">
+    Upload an image
+    </button>
+    <div id="upload-preview" class="dropzone-previews">
+    </div>
 </div>
 
 <script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
