@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-import os
+import os, sys, time, glob
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import BadRequest
+from stat import S_ISREG, ST_CTIME, ST_MODE
 
 STATIC_PATH = "/static"
 STATIC_FOLDER = "../static"
 TEMPLATE_FOLDER = "../templates"
 UPLOAD_FOLDER = '../static/uploads'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+PAGE_SIZE = 5
 
 app = Flask(__name__,
             static_url_path = STATIC_PATH,
@@ -28,32 +30,35 @@ def index():
 def upload():
     return render_template("upload")
 
-def get_image_url(index):
-    files = [ f for f in os.listdir(UPLOAD_FOLDER) if os.path.isfile(os.path.join(UPLOAD_FOLDER,f)) ]
-    if index >= len(files):
-        return "", len(files)
-    return "/static/uploads/" + files[index], len(files)
+def get_image_urls(page):
+    files = filter(os.path.isfile, glob.glob(os.path.join(UPLOAD_FOLDER, "*")))
+    file_list = []
+    for f in files:
+        d = os.path.getmtime(f)
+        file_list.append((os.path.basename(f),d))
+    file_list.sort(key=lambda x: x[1], reverse=True)
+
+    urls = [ "/static/uploads/" + f[0] for f in file_list[page * PAGE_SIZE : page * PAGE_SIZE + PAGE_SIZE]]
+    return urls, page < (len(file_list) // PAGE_SIZE) 
 
 @app.route("/images")
 def images():
-    url, count = get_image_url(0)
-    if count > 1:
-        next_index = 1
+    urls, have_more = get_image_urls(0)
+    if have_more:
+        next_page = 1
     else:
-        next_index = 0
-    print "images next: %d" % next_index
-    return render_template("images", image_url=url, next_index=index)
+        next_page = 0
+    return render_template("images", urls=urls, next_page=index)
 
-@app.route("/image/<int:index>")
-def image(index):
-    url, count = get_image_url(index)
-    print count
-    if index < count - 1:
-        next_index = index + 1
+@app.route("/images/<int:page>")
+def image(page):
+    urls, have_more = get_image_urls(page)
+    if have_more:
+        next_page = page + 1
     else:
-        next_index = 0
-    print "image %s next: %d" % (index, next_index)
-    return render_template("image", image_url=url, next_index=next_index)
+        next_page = 0
+
+    return render_template("image", urls=urls, next_page=next_page)
 
 @app.route("/chill")
 def chill():
