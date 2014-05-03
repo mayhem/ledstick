@@ -1,8 +1,9 @@
 {% extends 'layout' %}
+{% set active = "upload" %}
 {% block body %}
 <link rel="stylesheet" type="text/css" href="/static/css/dropzone.css">
 <div style="text-align: center">
-    <button id="upload" class="btn btn-primary btn-lg dropzone-btn">
+    <button id="upload" class="btn btn-warning btn-lg dropzone-btn">
     Upload an image
     </button>
     <div id="upload-preview" class="dropzone-previews">

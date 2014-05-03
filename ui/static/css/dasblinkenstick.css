@@ -1,5 +1,5 @@
 body {
-    background-color: #DBD;
+    background-color: #000;
 }
 
 .dropzone-btn {
@@ -14,10 +14,14 @@ body {
 }
 
 .error {
-    background-color: white;
     font-size: 20pt; 
-    border-radius: 15px;
     text-align: center;
-    margin: 1em;
-    padding: 1em;
+}
+
+.btn-warning {
+    color: #444;
+}
+
+.btn-warning:hover {
+    color: #444;
 }

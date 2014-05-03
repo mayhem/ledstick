@@ -46,12 +46,12 @@ def get_image_urls(page):
 
 def scale_image(filename, width):
     tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    if not subprocess.check_call(["convert", "-size", "%d" % width, filename, "-resize", 
-                          "%d" % width, tf]):
+    try:
+        subprocess.check_call(["convert", "-size", "%d" % width, filename, "-resize", "%d" % width, tf])
         os.unlink(filename);
         os.rename(tf, filename)
-    else:
-        print "resize failed"
+    except subprocess.CalledProcessError:
+        pass
 
 @app.route("/images")
 def images():
@@ -71,10 +71,6 @@ def image(page):
         next_page = 0
 
     return render_template("image", urls=urls, next_page=next_page)
-
-@app.route("/chill")
-def chill():
-    return render_template("index")
 
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():

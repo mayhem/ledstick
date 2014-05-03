@@ -9,16 +9,11 @@
     <link rel="icon" type="image/png" href="/static/images/dasblinkenstick-icon.png" />
   </head>
   <body>
-    <nav class="navbar navbar-default" role="navigation">
-      <div class="container-fluid">
-          <ul class="nav navbar-nav">
-              <li><a href="/" class="slim-nav-item">home</a></li>
-              <li><a href="/images" class="slim-nav-item">images</a></li>
-              <li><a href="/upload" class="slim-nav-item">upload</a></li>
-              <li><a href="/chill" class="slim-nav-item">chill</a></li>
-          </ul>
-      </div>
-    </nav>
+    <div class="btn-group btn-group-justified" style="padding-bottom: 10px">
+       <a href="/" class="btn btn-lg btn-default {% if active == "index" %}btn-warning{% endif %}">home</a>
+       <a href="/images" class="btn btn-lg btn-default {% if active == "images" %}btn-warning{% endif %}">images</a>
+       <a href="/upload" class="btn btn-lg btn-default {% if active == "upload" %}btn-warning{% endif %}">upload</a>
+    </div>
     <div class="container-fluid">
        {% block body %}{% endblock %}
     </div>

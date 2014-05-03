@@ -1,4 +1,5 @@
 {% extends 'layout' %}
+{% set active = "images" %}
 {% block body %}
 <div>
     <div id="images">

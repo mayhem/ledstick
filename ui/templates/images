@@ -1,4 +1,5 @@
 {% extends 'layout' %}
+{% set active = "images" %}
 {% block body %}
 <div>
     <div id="images">
@@ -7,8 +8,8 @@
                <img class="image" src="{{ url }}"></img>
            </div>
        {% else %}
-           <div class="error">
-               No images have been uploaded. <a href="/upload">Get moving!</a>
+           <div class="alert alert-info error">
+               No images have been uploaded. <a href="/upload" class="alert-link">Get moving!</a>
            </div>
        {% endfor %}
     </div>
