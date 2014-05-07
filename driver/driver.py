@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 import sys
 import os
-import serial
+import smbus
 import random
 import png
 import struct
 from time import sleep, time
 from struct import pack, unpack
 
-BAUD_RATE = 115200
+DUE_ADDRESS = 45
+DUE_BUS = 1
 
 def crc16_update(crc, a):
     crc ^= a
@@ -21,58 +22,16 @@ def crc16_update(crc, a):
 
 class Driver(object):
 
-    def __init__(self, device, leds, delay):
-        self.ser = None
-        self.device = device
+    def __init__(self, leds, delay):
         self.num_leds = leds
         self.delay = delay
+        self.due = None
 
     def get_num_leds(self):
         return self.num_leds
 
-    def write(self, data):
-        self.ser.write(data)
-#        data = data.replace("\r", "\\r")
-#        data = data.replace("\n", "\\n")
-#        sys.stdout.write("w: ")
-#        sys.stdout.write(data)
-#        sys.stdout.flush()
-
-    def wait_for_prompt(self, prompt = ">", wakeup="\r"):
-#        sys.stdout.write("r: ")
-#        sys.stdout.flush()
-        while True:
-            ch = self.ser.read(1)
-            if not ch:
-#                print "<t>"
-                self.ser.flush()
-                if not wakeup: 
-                    return False
-                self.write(wakeup)  
-                continue
-
-#            sys.stdout.write(ch)
-#            sys.stdout.flush()
-            if ch == prompt:
-#                print
-                return True
-
     def open(self):
-        '''Open the serial connection to the router'''
-
-        try:
-            self.ser = serial.Serial(self.device, 
-                                     BAUD_RATE, 
-                                     bytesize=serial.EIGHTBITS, 
-                                     parity=serial.PARITY_NONE, 
-                                     stopbits=serial.STOPBITS_ONE,
-                                     timeout=10)
-        except serial.serialutil.SerialException:
-            raise SerialIOError
-
-        self.ser.flushOutput()
-        self.ser.flushInput()
-        sleep(3)
+        self.due = smbus.SMBus(DUE_BUS)
 
     def send_image(self, w, h, d, pixels):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
@@ -84,37 +43,15 @@ class Driver(object):
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
-        self.ser.flushInput()
-
         print "Sending packet: %d" % len(packet)
-#        r = self.ser.write(packet)
-#        print "Wrote %d bytes" % r 
-
-#        while True:
-#            while self.ser.inWaiting():
-#                sys.stdout.write(self.ser.read(1))
-
         for ch in packet:
-             self.ser.write(ch)
-             while self.ser.inWaiting():
-                 sys.stdout.write(self.ser.read(1))
-#             sleep(.001)
+            while True:
+                try:
+                    self.due.write_byte(DUE_ADDRESS, ord(ch))
+                    break
+                except IOError:
+                    sleep(.001)
 
-        print "\npacket complete. trailing data:"
-        while True: #self.ser.inWaiting():
-            sys.stdout.write(self.ser.read(1))
-
-#            sent = self.ser.write(packet)
-#            if sent != len(packet):
-#                print "Sent %d of %d bytes" % (sent, len)
-#            ack = self.ser.read(1)
-#            if ack: 
-#                print "image sent ok"
-#                break
-#            if not ack:
-#                print "timeout"
-#            else:
-#                print "Received ack: %d" % ord(ack)
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
@@ -129,7 +66,6 @@ def read_image(image_file):
     return (x, y, pixels)
 
 if len(sys.argv) < 1:
-    print "Usage: %s <serial device>" % sys.argv[0]
     sys.exit(1)
 
 width = 20
@@ -145,8 +81,8 @@ for y in xrange(height):
     pixels += row
 
 num_leds = 72
-driver = Driver(sys.argv[1], num_leds, 0)
-print "open serial port"
+driver = Driver(num_leds, 0)
+print "open i2c port"
 driver.open()
 print "send image"
 driver.send_image(width, height, 100, pixels)
