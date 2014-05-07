@@ -1,9 +1,9 @@
-#define MAX_WIDTH  110
+#define MAX_WIDTH  100
 #define MAX_HEIGHT 144
 
 // BITMAP header does NOT include the 2 byte size!
 #define BITMAP_HEADER_SIZE (sizeof(uint32_t) + (sizeof(uint16_t) * 3))
-#define MAX_PACKET_PAYLOAD (BITMAP_HEADER_SIZE + (MAX_WIDTH * MAX_HEIGHT * 3)) 
+#define MAX_PACKET_PAYLOAD (BITMAP_HEADER_SIZE + (MAX_WIDTH * MAX_HEIGHT * sizeof(color_t))) 
 
 #define HEADER_LEN 4
 

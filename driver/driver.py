@@ -8,7 +8,7 @@ import struct
 from time import sleep, time
 from struct import pack, unpack
 
-BAUD_RATE = 9600
+BAUD_RATE = 115200
 
 def crc16_update(crc, a):
     crc ^= a
@@ -87,28 +87,18 @@ class Driver(object):
         self.ser.flushInput()
 
         print "Sending packet: %d" % len(packet)
-        r = self.ser.write(packet)
-        print "Wrote %d bytes" % r 
-        while True:
-            print self.ser.outWaiting()
-        while self.ser.outWaiting() > 0:
-            print "sleep"
-            sleep(.0001)
+#        r = self.ser.write(packet)
+#        print "Wrote %d bytes" % r 
 
+#        while True:
 #            while self.ser.inWaiting():
-#            sys.stdout.write(self.ser.read(1))
+#                sys.stdout.write(self.ser.read(1))
 
-#        for ch in packet:
-#            while True:
-#                r = self.ser.write(ch)
-#                if r != 1:
-#                    print "sleep"
-#                    sleep(.0005)
-#                else:
-#                    while self.ser.outWaiting() > 0:
-#                    sleep(.0005)
-#                    break
-
+        for ch in packet:
+             self.ser.write(ch)
+             while self.ser.inWaiting():
+                 sys.stdout.write(self.ser.read(1))
+#             sleep(.001)
 
         print "\npacket complete. trailing data:"
         while True: #self.ser.inWaiting():

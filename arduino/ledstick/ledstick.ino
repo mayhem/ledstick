@@ -1,6 +1,9 @@
+
 #include <Adafruit_NeoPixel.h>
 #include <Timer.h>
 #include <avr/pgmspace.h>
+
+
 
 #include "ledstick.h" 
 
@@ -32,21 +35,14 @@ void tick()
    ticks++;
 }
 
-int led = 13;
 void startup(void)
 {
     uint8_t i, j;
     color_t col1 = { 128, 70, 0 };
     color_t col2 = { 128, 0, 128 };
 
-    pinMode(led, OUTPUT);
     for(i = 0; i < 10; i++)
-    {
-        if (i % 2 == 0)
-            digitalWrite(led, HIGH);
-        else
-            digitalWrite(led, LOW);
-            
+    {       
         for(j = 0; j < DEVICE_HEIGHT; j++)
         {
             if (i % 2 == 0)
@@ -138,8 +134,8 @@ int receive_char(char ch, bitmap_t &bitmap)
  
     if (num_received == 4) //sizeof(bitmap.len))
     {
-       //Serial.print("bitmap.len ");
-       //Serial.println(bitmap.len, DEC);
+       Serial.print("bitmap.len ");
+       Serial.println(bitmap.len, DEC);
        if (bitmap.len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
@@ -170,6 +166,8 @@ int receive_char(char ch, bitmap_t &bitmap)
        Serial.println(sent_crc, HEX);
        Serial.print("     crc ");
        Serial.println(crc, HEX);
+       Serial.print("received: ");
+       Serial.println(num_received, DEC);
            
        if (crc != sent_crc)
        {
@@ -213,7 +211,13 @@ void serialEvent()
         if (header_count == HEADER_LEN)
             timeout = ticks + 2;
                       
+
         ret = receive_char(ch, bitmaps[0]);
+        //ret = RECEIVE_OK;
+        //num_received++;
+        if (ret != RECEIVE_OK)
+            timeout = 0;
+            
         if (ret == RECEIVE_ABORT_PACKET)
         {
             set_color(255, 0, 0);
@@ -231,32 +235,56 @@ void serialEvent()
             // use bitmap & swap in bitmap here
             set_color(0, 255, 0);
             header_count = 0;
+            return;
         }   
     }
     return;
 }
 
+const int led = 13;
 void setup() 
 { 
-  Serial.begin(9600); 
-  strip.begin();
+    int i;
+    
+    pinMode(led, OUTPUT);
 
-  startup();
-  cur_width = bitmaps[0].w;
-  t.every(1000, tick);
+    
+    for(i = 0; i < 10; i++)
+    {
+        if (i % 2 == 0)
+            digitalWrite(led, HIGH);
+        else
+            digitalWrite(led, LOW);
+        delay(100);
+    }
+  
+    Serial.begin(115200); 
+    
+    strip.begin();
+
+    startup();
+    
+    cur_width = bitmaps[0].w;
+    t.every(1000, tick);
+    
+    Serial.print("max headroom: ");
+    Serial.println(MAX_PACKET_PAYLOAD, DEC);
 }
 
 void loop()
-{
+{    
     if (timeout && timeout < ticks)
     {
+        Serial.print("timeout -- received: ");
+        Serial.println(num_received, DEC);
         timeout = 0;
         num_received = 0;
-        Serial.println("timeout!");
+
     }  
     t.update();
 }
 
+#if 0
 void _loop() 
 {
     static uint16_t col = 0;
@@ -279,4 +307,5 @@ void _loop()
         }
     }    
 }
+#endif
 
