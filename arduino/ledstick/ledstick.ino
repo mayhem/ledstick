@@ -1,6 +1,7 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <Timer.h>
+#include <Wire.h>
 #include <avr/pgmspace.h>
 
 
@@ -135,7 +136,7 @@ int receive_char(char ch, bitmap_t &bitmap)
     if (num_received == 4) //sizeof(bitmap.len))
     {
        Serial.print("bitmap.len ");
-       Serial.println(bitmap.len, DEC);
+       Serial.println(bitmap.len, HEX);
        if (bitmap.len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
@@ -167,7 +168,7 @@ int receive_char(char ch, bitmap_t &bitmap)
        Serial.print("     crc ");
        Serial.println(crc, HEX);
        Serial.print("received: ");
-       Serial.println(num_received, DEC);
+       Serial.println(total, DEC);
            
        if (crc != sent_crc)
        {
@@ -182,16 +183,14 @@ int receive_char(char ch, bitmap_t &bitmap)
     return RECEIVE_OK;
 }
 
-void serialEvent()
+void receiveEvent()
 {
-    int ch, ret;
+    int ret;
+    char ch;
     
-    while (Serial.available() > 0) 
+    while (Wire.available() > 0) 
     {
-        ch = Serial.read();
-        if (ch < 0)
-            break;
-            
+        ch = Wire.read(); 
         if (header_count < HEADER_LEN)
         {
             //Serial.print(" hdr: ");
@@ -258,7 +257,9 @@ void setup()
         delay(100);
     }
   
-    Serial.begin(115200); 
+    Serial.begin(57600);
+    Wire.begin(45);  
+    Wire.onReceive(receiveEvent);
     
     strip.begin();
 
@@ -266,9 +267,6 @@ void setup()
     
     cur_width = bitmaps[0].w;
     t.every(1000, tick);
-    
-    Serial.print("max headroom: ");
-    Serial.println(MAX_PACKET_PAYLOAD, DEC);
 }
 
 void loop()
