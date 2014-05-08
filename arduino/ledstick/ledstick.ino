@@ -30,6 +30,7 @@ int header_count = 0;
 uint32_t timeout = 0;
 int num_received = 0;
 const char header[HEADER_LEN] = { 0xF0, 0x0F, 0x0F, 0xF0 };
+uint8_t response = RECEIVE_NO_STATUS;
 
 void tick()
 {
@@ -147,6 +148,7 @@ int receive_char(char ch, bitmap_t &bitmap)
        
        // total number of bytes to receive, including the crc checksum
        total = sizeof(uint16_t) + bitmap.len + sizeof(uint16_t) + sizeof(uint16_t);
+       response = RECEIVE_NO_STATUS;
     }   
     if (num_received == total - 1)
        *((char *)&sent_crc) = ch;
@@ -183,7 +185,7 @@ int receive_char(char ch, bitmap_t &bitmap)
     return RECEIVE_OK;
 }
 
-void receiveEvent()
+void receiveEvent(int count)
 {
     int ret;
     char ch;
@@ -210,34 +212,31 @@ void receiveEvent()
         if (header_count == HEADER_LEN)
             timeout = ticks + 2;
                       
-
-        ret = receive_char(ch, bitmaps[0]);
-        //ret = RECEIVE_OK;
-        //num_received++;
-        if (ret != RECEIVE_OK)
+        response = receive_char(ch, bitmaps[0]);
+        if (response == RECEIVE_OK)
+            continue;
+        
+        if (response == RECEIVE_PACKET_COMPLETE)
+        {
+            // Do something!
             timeout = 0;
-            
-        if (ret == RECEIVE_ABORT_PACKET)
-        {
-            set_color(255, 0, 0);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_ABORT_PACKET_CRC)
-        {
-            set_color(0, 0, 255);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_PACKET_COMPLETE)
-        {
-            // use bitmap & swap in bitmap here
-            set_color(0, 255, 0);
             header_count = 0;
             return;
-        }   
+        } 
+        if (response == RECEIVE_ABORT_PACKET_CRC || response == RECEIVE_ABORT_PACKET)
+        {
+            timeout = 0;
+            header_count = 0;
+            continue;
+        }
+  
     }
     return;
+}
+
+void requestEvent()
+{
+    Wire.write(response);
 }
 
 const int led = 13;
@@ -246,7 +245,6 @@ void setup()
     int i;
     
     pinMode(led, OUTPUT);
-
     
     for(i = 0; i < 10; i++)
     {
@@ -260,6 +258,7 @@ void setup()
     Serial.begin(57600);
     Wire.begin(45);  
     Wire.onReceive(receiveEvent);
+    Wire.onRequest(requestEvent);
     
     strip.begin();
 
@@ -277,7 +276,7 @@ void loop()
         Serial.println(num_received, DEC);
         timeout = 0;
         num_received = 0;
-
+        response = RECEIVE_TIMEOUT;
     }  
     t.update();
 }
