@@ -8,8 +8,16 @@ import struct
 from time import sleep, time
 from struct import pack, unpack
 
+MASTER_ADDRESS = 69
 DUE_ADDRESS = 45
 DUE_BUS = 1
+
+RECEIVE_OK               = 0
+RECEIVE_ABORT_PACKET     = 1
+RECEIVE_ABORT_PACKET_CRC = 2
+RECEIVE_PACKET_COMPLETE  = 3
+RECEIVE_NO_STATUS        = 4
+RECEIVE_TIMEOUT          = 5
 
 def crc16_update(crc, a):
     crc ^= a
@@ -43,15 +51,23 @@ class Driver(object):
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
-        print "Sending packet: %d" % len(packet)
-        for ch in packet:
+        while True:
+            for ch in packet:
+                while True:
+                    try:
+                        self.due.write_byte(DUE_ADDRESS, ord(ch))
+                        break
+                    except IOError:
+                        sleep(.001)
+
             while True:
                 try:
-                    self.due.write_byte(DUE_ADDRESS, ord(ch))
+                    ret = self.due.read_byte(DUE_ADDRESS)
                     break
-                except IOError:
+                except IOError, err:
                     sleep(.001)
-
+            if ret == RECEIVE_PACKET_COMPLETE:
+                break
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
