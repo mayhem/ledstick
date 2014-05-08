@@ -30,13 +30,9 @@ def crc16_update(crc, a):
 
 class Driver(object):
 
-    def __init__(self, leds, delay):
-        self.num_leds = leds
+    def __init__(self, delay):
         self.delay = delay
         self.due = None
-
-    def get_num_leds(self):
-        return self.num_leds
 
     def open(self):
         self.due = smbus.SMBus(DUE_BUS)
@@ -85,7 +81,7 @@ def read_image(image_file):
     return (x, y, pixels)
 
 def make_test_image():
-    width = 10 
+    width = 100 
     height = 144
     pixels = ""
     for y in xrange(height):
@@ -96,17 +92,45 @@ def make_test_image():
             else:
                 row += chr(0) + chr(0) + chr(255)
         pixels += row
+
     return (width, height, pixels)
+
+def rotate_image(width, height, pixels):
+
+    new_pixels = ""
+    for x in xrange(width):
+        line = ""
+        for y in xrange(height):
+            line += pixels[y * width * 3 + (x * 3)]
+            line += pixels[y * width * 3 + (x * 3) + 1]
+            line += pixels[y * width * 3 + (x * 3) + 2]
+
+        new_pixels += line
+
+    return new_pixels
+
+def dump_image(width, height, pixels):
+    t_pixels = ""
+    for x in xrange(width):
+        txt = ""
+        for y in xrange(height):
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3)]) 
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 1]) 
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 2]) 
+
+        t_pixels += txt + "\n"
+    print t_pixels
 
 if len(sys.argv) < 2:
     print "Usage: driver.py <png file>"
     sys.exit(1)
 
-#width, height, pixels = read_image(sys.argv[1]);
-width, height, pixels = make_test_image()
+width, height, pixels = read_image(sys.argv[1]);
+#width, height, pixels = make_test_image()
 
-num_leds = 72
-driver = Driver(num_leds, 0)
+#pixels = rotate_image(width, height, pixels)
+
+driver = Driver(0)
 print "open i2c port"
 driver.open()
 print "send image"
