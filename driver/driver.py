@@ -48,14 +48,17 @@ class Driver(object):
         for ch in packet:
             crc = crc16_update(crc, ord(ch))
 
+        print "packet len: %d %X" % (len(packet), len(packet))
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
         while True:
-            for ch in packet:
+            for i, ch in enumerate(packet):
                 while True:
                     try:
+#                        print "%d: %X" % (i, ord(ch))
                         self.due.write_byte(DUE_ADDRESS, ord(ch))
+
                         break
                     except IOError:
                         sleep(.001)
@@ -81,20 +84,26 @@ def read_image(image_file):
 
     return (x, y, pixels)
 
-if len(sys.argv) < 1:
+def make_test_image():
+    width = 10 
+    height = 144
+    pixels = ""
+    for y in xrange(height):
+        row = ""
+        for x in xrange(width):
+            if x % 2 == 0:
+                row += chr(255) + chr(0) + chr(0)
+            else:
+                row += chr(0) + chr(0) + chr(255)
+        pixels += row
+    return (width, height, pixels)
+
+if len(sys.argv) < 2:
+    print "Usage: driver.py <png file>"
     sys.exit(1)
 
-width = 20
-height = 20
-pixels = ""
-for y in xrange(height):
-    row = ""
-    for x in xrange(width):
-        if ((x + y) % 2 == 0):
-            row += chr(255) + chr(255) + chr(0)
-        else:
-            row += chr(255) + chr(0) + chr(255)
-    pixels += row
+#width, height, pixels = read_image(sys.argv[1]);
+width, height, pixels = make_test_image()
 
 num_leds = 72
 driver = Driver(num_leds, 0)
