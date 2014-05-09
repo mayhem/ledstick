@@ -16,10 +16,17 @@ def load_files(file_list):
         data = r.read()
         width = data[0]
         height = data[1]
-
+   
         pixels = ""
-        for row in data[2]:
-            pixels += row.tostring()
+        if data[3]['alpha']:
+            for row in data[2]:
+                for i in xrange(width):
+                    pixels += chr(row[i * 4])
+                    pixels += chr(row[i * 4 + 1])
+                    pixels += chr(row[i * 4 + 2])
+        else:
+            for row in data[2]:
+                pixels += row.tostring()
 
         list.append({ 'width' : width, 'height' : height, 'pixels' : pixels })
     return list
