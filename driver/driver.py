@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 import sys
 import os
-import smbus
+import serial
 import random
 import png
 import struct
 from time import sleep, time
 from struct import pack, unpack
 
-MASTER_ADDRESS = 69
-DUE_ADDRESS = 45
-DUE_BUS = 1
+BAUD_RATE = 115200
 
 RECEIVE_OK               = 0
 RECEIVE_ABORT_PACKET     = 1
@@ -30,7 +28,8 @@ def crc16_update(crc, a):
 
 class Driver(object):
 
-    def __init__(self, leds, delay):
+    def __init__(self, device, leds, delay):
+        self.device = device
         self.num_leds = leds
         self.delay = delay
         self.due = None
@@ -39,7 +38,22 @@ class Driver(object):
         return self.num_leds
 
     def open(self):
-        self.due = smbus.SMBus(DUE_BUS)
+        '''Open the serial connection to the router'''
+        try:
+            self.ser = serial.Serial(self.device, 
+                                     BAUD_RATE, 
+                                     bytesize=serial.EIGHTBITS, 
+                                     parity=serial.PARITY_NONE, 
+                                     stopbits=serial.STOPBITS_ONE,
+                                     timeout=.1)
+        except serial.serialutil.SerialException:
+            raise SerialIOError
+
+        self.ser.flushOutput()
+        self.ser.flushInput()
+
+        # A connection to the due causes the Due to reboot. Thus we wait.
+        sleep(3)
 
     def send_image(self, w, h, d, pixels):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
@@ -55,19 +69,28 @@ class Driver(object):
             for ch in packet:
                 while True:
                     try:
-                        self.due.write_byte(DUE_ADDRESS, ord(ch))
-                        break
-                    except IOError:
+                        num = self.ser.write(ord(ch))
+                        if num == 1:
+                            break
+                        print "write fail, retry"
+                    except SerialTimeoutException:
+                        print "write timeout"
                         sleep(.001)
 
             while True:
                 try:
-                    ret = self.due.read_byte(DUE_ADDRESS)
-                    break
-                except IOError, err:
+                    ret = self.ser.read()
+                    if num == 1:
+                        break
+                    print "read fail, retry"
+                except SerialTimeoutException:
+                    print "read timeout"
                     sleep(.001)
+
             if ret == RECEIVE_PACKET_COMPLETE:
                 break
+
+            print "Received char %X. WTF?" % ch
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
@@ -104,8 +127,8 @@ for y in xrange(height):
     pixels += row
 
 num_leds = 72
-driver = Driver(num_leds, 0)
-print "open i2c port"
+driver = Driver("/dev/ttyACM0", num_leds, 0)
+print "open port"
 driver.open()
 print "send image"
 driver.send_image(width, height, 100, pixels)

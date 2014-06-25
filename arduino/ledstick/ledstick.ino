@@ -1,7 +1,6 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <Timer.h>
-#include <Wire.h>
 #include <avr/pgmspace.h>
 
 #include "ledstick.h" 
@@ -123,10 +122,10 @@ int receive_char(char ch, bitmap_t &bitmap)
     if (num_received == 0)
         ptr = (char *)&bitmap;
         
-    //Serial.print("data: ");
-    //Serial.print(num_received, DEC);
-    //Serial.print(" ");  
-    //Serial.println(ch, HEX);       
+    Serial.print("data: ");
+    Serial.print(num_received, DEC);
+    Serial.print(" ");  
+    Serial.println(ch, HEX);       
         
     // store the character    
     *ptr = ch;
@@ -201,14 +200,14 @@ int receive_char(char ch, bitmap_t &bitmap)
     return RECEIVE_OK;
 }
 
-void receiveEvent(int count)
+void serialEvent()
 {
     int ret;
     char ch;
     
-    while (Wire.available() > 0) 
+    while (Serial.available()) 
     {
-        ch = Wire.read(); 
+        ch = Serial.read(); 
         if (header_count < HEADER_LEN)
         {
             //Serial.print(" hdr: ");
@@ -250,11 +249,6 @@ void receiveEvent(int count)
     return;
 }
 
-void requestEvent()
-{
-    Wire.write(response);
-}
-
 const int led = 13;
 void setup() 
 { 
@@ -272,9 +266,6 @@ void setup()
     }
   
     Serial.begin(57600);
-    Wire.begin(45);  
-    Wire.onReceive(receiveEvent);
-    Wire.onRequest(requestEvent);
     
     strip.begin();
 
