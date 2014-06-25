@@ -1,10 +1,7 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <Timer.h>
-#include <Wire.h>
 #include <avr/pgmspace.h>
-
-
 
 #include "ledstick.h" 
 
@@ -22,7 +19,7 @@ uint16_t cur_width = 0;
 
 // Communication stuff
 
-const int num_bitmaps = 2;
+const int num_bitmaps = 1;
 bitmap_t bitmaps[num_bitmaps];
 int count = 0;
 int total = -1;
@@ -30,6 +27,8 @@ int header_count = 0;
 uint32_t timeout = 0;
 int num_received = 0;
 const char header[HEADER_LEN] = { 0xF0, 0x0F, 0x0F, 0xF0 };
+uint8_t response = RECEIVE_NO_STATUS;
+int show_image = 0;
 
 void tick()
 {
@@ -123,10 +122,10 @@ int receive_char(char ch, bitmap_t &bitmap)
     if (num_received == 0)
         ptr = (char *)&bitmap;
         
-    //Serial.print("data: ");
-    //Serial.print(num_received, DEC);
-    //Serial.print(" ");  
-    //Serial.println(ch, HEX);       
+    Serial.print("data: ");
+    Serial.print(num_received, DEC);
+    Serial.print(" ");  
+    Serial.println(ch, HEX);       
         
     // store the character    
     *ptr = ch;
@@ -145,8 +144,10 @@ int receive_char(char ch, bitmap_t &bitmap)
            return RECEIVE_ABORT_PACKET;
        }
        
+       show_image = 0;
        // total number of bytes to receive, including the crc checksum
        total = sizeof(uint16_t) + bitmap.len + sizeof(uint16_t) + sizeof(uint16_t);
+       response = RECEIVE_NO_STATUS;
     }   
     if (num_received == total - 1)
        *((char *)&sent_crc) = ch;
@@ -167,9 +168,25 @@ int receive_char(char ch, bitmap_t &bitmap)
        Serial.println(sent_crc, HEX);
        Serial.print("     crc ");
        Serial.println(crc, HEX);
+       Serial.print("width: ");
+       Serial.println(bitmap.w, DEC);
+       Serial.print("height: ");
+       Serial.println(bitmap.h, DEC);
        Serial.print("received: ");
-       Serial.println(total, DEC);
+       Serial.println(total, DEC);       
            
+       for(i = 0; i < 3; i++)
+       {
+          Serial.print("data: ");
+          Serial.print(i, DEC);
+          Serial.print(" ");  
+          Serial.print(bitmap.pixels[i].r, HEX);    
+          Serial.print(" ");  
+          Serial.print(bitmap.pixels[i].g, HEX);  
+          Serial.print(" ");  
+          Serial.println(bitmap.pixels[i].b, HEX); 
+       }
+       
        if (crc != sent_crc)
        {
            Serial.write("0x00\n");
@@ -183,14 +200,14 @@ int receive_char(char ch, bitmap_t &bitmap)
     return RECEIVE_OK;
 }
 
-void receiveEvent()
+void serialEvent()
 {
     int ret;
     char ch;
     
-    while (Wire.available() > 0) 
+    while (Serial.available()) 
     {
-        ch = Wire.read(); 
+        ch = Serial.read(); 
         if (header_count < HEADER_LEN)
         {
             //Serial.print(" hdr: ");
@@ -210,32 +227,24 @@ void receiveEvent()
         if (header_count == HEADER_LEN)
             timeout = ticks + 2;
                       
-
-        ret = receive_char(ch, bitmaps[0]);
-        //ret = RECEIVE_OK;
-        //num_received++;
-        if (ret != RECEIVE_OK)
+        response = receive_char(ch, bitmaps[0]);
+        if (response == RECEIVE_OK)
+            continue;
+        
+        if (response == RECEIVE_PACKET_COMPLETE)
+        {
+            show_image = 1;
             timeout = 0;
-            
-        if (ret == RECEIVE_ABORT_PACKET)
-        {
-            set_color(255, 0, 0);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_ABORT_PACKET_CRC)
-        {
-            set_color(0, 0, 255);
-            header_count = 0;
-            continue;
-        }
-        if (ret == RECEIVE_PACKET_COMPLETE)
-        {
-            // use bitmap & swap in bitmap here
-            set_color(0, 255, 0);
             header_count = 0;
             return;
-        }   
+        } 
+        if (response == RECEIVE_ABORT_PACKET_CRC || response == RECEIVE_ABORT_PACKET)
+        {
+            timeout = 0;
+            header_count = 0;
+            continue;
+        }
+  
     }
     return;
 }
@@ -246,7 +255,6 @@ void setup()
     int i;
     
     pinMode(led, OUTPUT);
-
     
     for(i = 0; i < 10; i++)
     {
@@ -258,8 +266,6 @@ void setup()
     }
   
     Serial.begin(57600);
-    Wire.begin(45);  
-    Wire.onReceive(receiveEvent);
     
     strip.begin();
 
@@ -271,22 +277,21 @@ void setup()
 
 void loop()
 {    
+    static uint16_t col = 0;
+    static uint8_t  image = 0, pass = 0;
+
+    t.update();
     if (timeout && timeout < ticks)
     {
         Serial.print("timeout -- received: ");
         Serial.println(num_received, DEC);
         timeout = 0;
         num_received = 0;
-
+        response = RECEIVE_TIMEOUT;
     }  
-    t.update();
-}
 
-#if 0
-void _loop() 
-{
-    static uint16_t col = 0;
-    static uint8_t  image = 0, pass = 0;
+    if (!show_image)
+        return;
     
     show_col(image, col);
     col++;
@@ -305,5 +310,4 @@ void _loop()
         }
     }    
 }
-#endif
 

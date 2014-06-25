@@ -7,10 +7,12 @@
 
 #define HEADER_LEN 4
 
-#define RECEIVE_OK               0
-#define RECEIVE_ABORT_PACKET     1
-#define RECEIVE_ABORT_PACKET_CRC 2
-#define RECEIVE_PACKET_COMPLETE  3
+  #define RECEIVE_OK               0
+  #define RECEIVE_ABORT_PACKET     1
+  #define RECEIVE_ABORT_PACKET_CRC 2
+  #define RECEIVE_PACKET_COMPLETE  3
+  #define RECEIVE_NO_STATUS        4
+  #define RECEIVE_TIMEOUT          5
 
 struct color_t
 {
