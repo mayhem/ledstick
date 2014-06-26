@@ -8,7 +8,8 @@ import struct
 from time import sleep, time
 from struct import pack, unpack
 
-BAUD_RATE = 115200
+BAUD_RATE = 57600
+TIMEOUT   = .1
 
 RECEIVE_OK               = 0
 RECEIVE_ABORT_PACKET     = 1
@@ -41,9 +42,9 @@ class Driver(object):
                                      bytesize=serial.EIGHTBITS, 
                                      parity=serial.PARITY_NONE, 
                                      stopbits=serial.STOPBITS_ONE,
-                                     timeout=.1)
+                                     timeout=TIMEOUT)
         except serial.serialutil.SerialException:
-            raise SerialIOError
+            raise IOError("Cannot open serial port %s" % self.device)
 
         self.ser.flushOutput()
         self.ser.flushInput()
@@ -51,44 +52,65 @@ class Driver(object):
         # A connection to the due causes the Due to reboot. Thus we wait.
         sleep(3)
 
+    def set_timeout(self, timeout = TIMEOUT):
+        self.ser.timeout = timeout
+
+    def read_char(self):
+        while True:
+            try:
+                ret = self.ser.read()
+                if num == 1:
+                    return ret
+                print "read fail, retry"
+            except serial.SerialTimeoutException:
+                print "read timeout"
+                sleep(.001)
+
+    def console(self):
+        self.set_timeout(0)
+        ret = self.ser.read()
+        self.set_timeout()
+        if len(ret) > 0:
+           print ret, 
+
     def send_image(self, w, h, d, pixels):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
         crc = 0
-        packet = struct.pack("<HHH", w, h, d) + pixels
+#        packet = struct.pack("<HHH", w, h, d) + pixels
+        packet = "nungaberry juice" * 100
         for ch in packet:
             crc = crc16_update(crc, ord(ch))
 
         print "packet len: %d %X" % (len(packet), len(packet))
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
+#        print "TIMEOUT TEST!"
+#        packet = pack("<I", len(packet) + 10) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
-        while True:
-            for i, ch in enumerate(packet):
-                while True:
-                    try:
-                        print "%d: %X" % (i, ord(ch))
-                        num = self.ser.write(ord(ch))
-                        if num == 1:
-                            break
-                        print "write fail, retry"
-                    except SerialTimeoutException:
-                        print "write timeout"
-                        sleep(.001)
-
+        for i, ch in enumerate(packet):
             while True:
+                #self.console()
                 try:
-                    ret = self.ser.read()
+#                    print "%d: %X" % (i, ord(ch))
+                    num = self.ser.write(ch)
                     if num == 1:
                         break
-                    print "read fail, retry"
-                except SerialTimeoutException:
-                    print "read timeout"
+                    print "write fail, retry"
+                except serial.SerialTimeoutException:
+                    print "write timeout"
                     sleep(.001)
 
-            if ret == RECEIVE_PACKET_COMPLETE:
-                break
+        self.ser.timeout = 1
+        ch = self.ser.read(1)
+        if ch:
+            print "Packet complete: %d" % (ord(ch))
+        else:
+            print "No response!"
 
-            print "Received char %X. WTF?" % ch
+#            if ret == RECEIVE_PACKET_COMPLETE:
+#                break
+
+#            print "Received char %X. WTF?" % ord(ch)
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
@@ -159,7 +181,7 @@ width, height, pixels = read_image(sys.argv[1]);
 
 #pixels = rotate_image(width, height, pixels)
 
-driver = Driver("/dev/ttyACM0", 0)
+driver = Driver("/dev/ttyAMA0", 0)
 print "open port"
 driver.open()
 print "send image"
