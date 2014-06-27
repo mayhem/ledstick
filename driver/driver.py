@@ -8,7 +8,7 @@ import struct
 from time import sleep, time
 from struct import pack, unpack
 
-BAUD_RATE = 57600
+BAUD_RATE = 115200
 TIMEOUT   = .1
 
 RECEIVE_OK               = 0
@@ -73,25 +73,38 @@ class Driver(object):
         if len(ret) > 0:
            print ret, 
 
+    def send_cmd(self, type):
+        packet = struct.pack("<c", cmd 
+        self.send_packet(packet)
+
+
     def send_image(self, w, h, d, pixels):
+        if not self.send_cmd(PACKET_LOAD_IMAGE_1):
+            print "Failed to send load command"
+            return False
+
+        max_blob_size = 10240
+        packet = struct.pack("<HHH", w, h, d) + pixels
+        num_blobs = (len(packet) // max_blob_size) + 1
+        for i in xrange(num_blobs):
+            print "Send blob: [%d : %d]" % (i * max_blob_size, (i+1) * max_blob_size)
+            if not self.send_packet(packet[i * max_blob_size : (i+1) * max_blob_size]):
+                print "Failed to send image blob"
+                return False
+
+    def send_packet(self, packet):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
         crc = 0
-#        packet = struct.pack("<HHH", w, h, d) + pixels
-        packet = "nungaberry juice" * 100
         for ch in packet:
             crc = crc16_update(crc, ord(ch))
 
         print "packet len: %d %X" % (len(packet), len(packet))
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
-#        print "TIMEOUT TEST!"
-#        packet = pack("<I", len(packet) + 10) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
         for i, ch in enumerate(packet):
             while True:
-                #self.console()
                 try:
-#                    print "%d: %X" % (i, ord(ch))
                     num = self.ser.write(ch)
                     if num == 1:
                         break
@@ -102,15 +115,15 @@ class Driver(object):
 
         self.ser.timeout = 1
         ch = self.ser.read(1)
-        if ch:
-            print "Packet complete: %d" % (ord(ch))
-        else:
+        if ch and ord(ch) == RECEIVE_PACKET_COMPLETE:
+            print "Packet sent ok."
+            return True
+        if not ch:
             print "No response!"
-
-#            if ret == RECEIVE_PACKET_COMPLETE:
-#                break
-
-#            print "Received char %X. WTF?" % ord(ch)
+            return False
+        else:
+            print "Packet response: %d" % ord(ch)
+            return False
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
