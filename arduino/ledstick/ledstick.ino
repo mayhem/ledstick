@@ -111,81 +111,94 @@ uint16_t crc16_update(uint16_t crc, uint8_t a)
     return crc;
 }
 
-int receive_char(char ch, bitmap_t &bitmap)
+int receive_char(char ch, char *packet, uint16_t *len)
 {
     static char *ptr = 0;
     static uint16_t sent_crc;
     
+    Serial.print(num_received, DEC);
+    Serial.print(" ");
+    Serial.println(ch, DEC);
+    
     // If this is the first character, set pointer to begin of bitmap
     if (num_received == 0)
-        ptr = (char *)&bitmap;
-        
-    //Serial.print("data: ");
-    //Serial.print(num_received, DEC);
-    //Serial.print(" ");  
-    //Serial.println(ch, HEX);       
+    {
+        Serial.println("len1");
+        ((char *)len)[0] = ch;
+        Serial.println(*len, DEC); 
+    }
+    else
+    if (num_received == 1)
+    {
+        Serial.println("len2");
+        Serial.println(*len, DEC); 
+        ((char *)len)[1] = ch; 
+        Serial.println(*len, DEC);      
+    }
+    else    
+    if (num_received == sizeof(uint16_t))
+    {
+        Serial.println("pack");
+        ptr = packet;
+    }
+    else
+    if (total_bytes > 0 && num_received == total_bytes - 1)
+    {
+        Serial.println("crc");
+        ptr = (char *)&sent_crc;
+    }
         
     // store the character    
     *ptr = ch;
     ptr++;
     num_received++;    
  
-    if (num_received == 4) //sizeof(bitmap.len))
+    if (num_received == sizeof(uint16_t))
     {
-       Serial.print("bitmap.len ");
-       Serial.println(bitmap.len, DEC);
-       if (bitmap.len > MAX_PACKET_PAYLOAD)
+       Serial.print("packet len ");
+       Serial.println(*len, DEC);
+       if (*len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
            ptr = NULL;
-           Serial.write("0x02\n");
+           Serial.write("-- abort packet\n");
            return RECEIVE_ABORT_PACKET;
        }
        
        show_image = 0;
-       // total number of bytes to receive, including the crc checksum
-       total_bytes = sizeof(uint16_t) + bitmap.len + sizeof(uint16_t) + sizeof(uint16_t);
+       // total number of bytes to receive, including packet and size the crc checksum
+       total_bytes = *len + sizeof(uint16_t) + sizeof(uint16_t);
        response = RECEIVE_NO_STATUS;
     }   
-    if (num_received == total_bytes - 1)
-       *((char *)&sent_crc) = ch;
        
-    if (num_received == total_bytes)
+    if (total_bytes > 0 && num_received == total_bytes)
     {
        uint16_t  crc = 0;
        char     *crc_ptr;
        int i;
        
-       *(((char *)&sent_crc)+1) = ch;
        num_received = 0;
        ptr = NULL;
        
-       for(i = 0, crc_ptr = (char *)&bitmap.w; i < bitmap.len; i++, crc_ptr++)
+       for(i = 0, crc_ptr = packet; i < *len; i++, crc_ptr++)
            crc = crc16_update(crc, *crc_ptr);
        
        Serial.print("sent crc ");
        Serial.println(sent_crc, HEX);
        Serial.print("     crc ");
        Serial.println(crc, HEX);
-       Serial.print("width: ");
-       Serial.println(bitmap.w, DEC);
-       Serial.print("height: ");
-       Serial.println(bitmap.h, DEC);
        Serial.print("received: ");
        Serial.println(total_bytes, DEC);       
            
-       for(i = 0; i < 3; i++)
-       {
-          Serial.print("data: ");
-          Serial.print(i, DEC);
-          Serial.print(" ");  
-          Serial.print(bitmap.pixels[i].r, HEX);    
-          Serial.print(" ");  
-          Serial.print(bitmap.pixels[i].g, HEX);  
-          Serial.print(" ");  
-          Serial.println(bitmap.pixels[i].b, HEX); 
-       }
-       
+       Serial.print("data: ");
+       Serial.print(i, DEC);
+       Serial.print(" ");  
+       Serial.print(packet[0], HEX);    
+       Serial.print(" ");  
+       Serial.print(packet[1], HEX);  
+       Serial.print(" ");  
+       Serial.println(packet[2], HEX); 
+
        if (crc != sent_crc)
        {
            Serial.write("0x00\n");
@@ -210,8 +223,10 @@ void reset_receive()
 
 void serialEvent1()
 {
-    int ret;
-    char ch;
+    int               ret;
+    char              ch;
+    static   packet_t packet;
+    static   uint16_t len = 0;
     
     while (Serial1.available()) 
     {
@@ -236,7 +251,7 @@ void serialEvent1()
             header_count++;
         }
         
-        response = receive_char(ch, bitmaps[0]);
+        response = receive_char(ch, (char *)&packet, &len);
         if (response == RECEIVE_OK)
             continue;
         
