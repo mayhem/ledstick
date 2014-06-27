@@ -20,6 +20,7 @@ uint16_t cur_width = 0;
 
 const int num_bitmaps = 2;
 bitmap_t bitmaps[num_bitmaps];
+uint8_t  blob_mode = 0; 
 int total_bytes = 0;
 int header_count = 0;
 uint32_t timeout = 0;
@@ -116,37 +117,19 @@ int receive_char(char ch, char *packet, uint16_t *len)
     static char *ptr = 0;
     static uint16_t sent_crc;
     
-    Serial.print(num_received, DEC);
-    Serial.print(" ");
-    Serial.println(ch, DEC);
+    //Serial.print(num_received, DEC);
+    //Serial.print(" ");
+    //Serial.println(ch, DEC);
     
     // If this is the first character, set pointer to begin of bitmap
     if (num_received == 0)
-    {
-        Serial.println("len1");
-        ((char *)len)[0] = ch;
-        Serial.println(*len, DEC); 
-    }
-    else
-    if (num_received == 1)
-    {
-        Serial.println("len2");
-        Serial.println(*len, DEC); 
-        ((char *)len)[1] = ch; 
-        Serial.println(*len, DEC);      
-    }
+        ptr = (char *)len;
     else    
     if (num_received == sizeof(uint16_t))
-    {
-        Serial.println("pack");
         ptr = packet;
-    }
     else
-    if (total_bytes > 0 && num_received == total_bytes - 1)
-    {
-        Serial.println("crc");
+    if (num_received > sizeof(uint16_t) && num_received == *len + 2)
         ptr = (char *)&sent_crc;
-    }
         
     // store the character    
     *ptr = ch;
@@ -162,6 +145,7 @@ int receive_char(char ch, char *packet, uint16_t *len)
            num_received = 0;
            ptr = NULL;
            Serial.write("-- abort packet\n");
+           Serial1.write(RECEIVE_ABORT_PACKET);
            return RECEIVE_ABORT_PACKET;
        }
        
@@ -201,11 +185,11 @@ int receive_char(char ch, char *packet, uint16_t *len)
 
        if (crc != sent_crc)
        {
-           Serial.write("0x00\n");
+           Serial1.write(RECEIVE_ABORT_PACKET_CRC);
            return RECEIVE_ABORT_PACKET_CRC;
-       }
-       
-       Serial.write("0x01\n");
+       }    
+
+       Serial1.write(RECEIVE_PACKET_COMPLETE);
        return RECEIVE_PACKET_COMPLETE;
     } 
   
@@ -226,7 +210,7 @@ void serialEvent1()
     int               ret;
     char              ch;
     static   packet_t packet;
-    static   uint16_t len = 0;
+    static   uint16_t len = 0, blob_offset = 0;
     
     while (Serial1.available()) 
     {
@@ -251,15 +235,53 @@ void serialEvent1()
             header_count++;
         }
         
-        response = receive_char(ch, (char *)&packet, &len);
-        if (response == RECEIVE_OK)
-            continue;
+        if (!blob_mode)
+        {
+            response = receive_char(ch, (char *)&packet, &len);
+            if (response == RECEIVE_OK)
+                continue;
         
-        Serial1.write(response);
-        if (response == RECEIVE_PACKET_COMPLETE)
-            show_image = 1;
-
-        reset_receive();
+            if (response == RECEIVE_PACKET_COMPLETE)
+            {
+                if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
+                {
+                     blob_mode = 1;
+                     len = 0;
+                     header_count = 0;
+                     blob_offset = 0;
+                     Serial.println("going into blob mode");
+                } 
+            }
+            reset_receive();         
+        }
+        else
+        {
+            response = receive_char(ch, ((char *)&bitmaps[0]) + blob_offset, &len);
+            if (response == RECEIVE_OK)
+                continue;
+        
+            if (response == RECEIVE_PACKET_COMPLETE)
+            {
+                if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
+                {
+                     if (len == BYTES_PER_BLOB)
+                     {
+                         Serial.println("received full blob");
+                         blob_offset += len;
+                         len = 0;
+                         header_count = 0;
+                     }
+                     else
+                     {
+                         Serial.println("received partial blob, leaving blob mode");
+                         blob_mode = 0;
+                         len = 0;
+                         header_count = 0;
+                     }
+                } 
+            }
+            reset_receive();         
+        }        
     }
     return;
 }
@@ -304,6 +326,7 @@ void loop()
         Serial.println(num_received, DEC);
         digitalWrite(led, HIGH);
         reset_receive();
+        blob_mode = 0;
         response = RECEIVE_TIMEOUT;
     }  
 
