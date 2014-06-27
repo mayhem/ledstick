@@ -10,7 +10,6 @@
 // bitmap stuff
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(DEVICE_HEIGHT, 2, NEO_GRB + NEO_KHZ800);
 
-
 // Time keeping
 Timer t;
 uint32_t ticks = 0;
@@ -19,7 +18,7 @@ uint16_t cur_width = 0;
 
 // Communication stuff
 
-const int num_bitmaps = 1;
+const int num_bitmaps = 2;
 bitmap_t bitmaps[num_bitmaps];
 int total_bytes = 0;
 int header_count = 0;
@@ -266,7 +265,7 @@ void setup()
     }
   
     Serial.begin(115200);
-    Serial1.begin(57600);
+    Serial1.begin(115200);
     
     strip.begin();
 
