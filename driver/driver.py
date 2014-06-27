@@ -9,6 +9,7 @@ from time import sleep, time
 from struct import pack, unpack
 
 BAUD_RATE = 115200
+TIMEOUT   = .1
 
 RECEIVE_OK               = 0
 RECEIVE_ABORT_PACKET     = 1
@@ -28,14 +29,10 @@ def crc16_update(crc, a):
 
 class Driver(object):
 
-    def __init__(self, device, leds, delay):
+    def __init__(self, device, delay):
         self.device = device
-        self.num_leds = leds
         self.delay = delay
-        self.due = None
-
-    def get_num_leds(self):
-        return self.num_leds
+        self.ser = None
 
     def open(self):
         '''Open the serial connection to the router'''
@@ -45,9 +42,9 @@ class Driver(object):
                                      bytesize=serial.EIGHTBITS, 
                                      parity=serial.PARITY_NONE, 
                                      stopbits=serial.STOPBITS_ONE,
-                                     timeout=.1)
+                                     timeout=TIMEOUT)
         except serial.serialutil.SerialException:
-            raise SerialIOError
+            raise IOError("Cannot open serial port %s" % self.device)
 
         self.ser.flushOutput()
         self.ser.flushInput()
@@ -55,42 +52,78 @@ class Driver(object):
         # A connection to the due causes the Due to reboot. Thus we wait.
         sleep(3)
 
+    def set_timeout(self, timeout = TIMEOUT):
+        self.ser.timeout = timeout
+
+    def read_char(self):
+        while True:
+            try:
+                ret = self.ser.read()
+                if num == 1:
+                    return ret
+                print "read fail, retry"
+            except serial.SerialTimeoutException:
+                print "read timeout"
+                sleep(.001)
+
+    def console(self):
+        self.set_timeout(0)
+        ret = self.ser.read()
+        self.set_timeout()
+        if len(ret) > 0:
+           print ret, 
+
+    def send_cmd(self, type):
+        packet = struct.pack("<c", cmd 
+        self.send_packet(packet)
+
+
     def send_image(self, w, h, d, pixels):
+        if not self.send_cmd(PACKET_LOAD_IMAGE_1):
+            print "Failed to send load command"
+            return False
+
+        max_blob_size = 10240
+        packet = struct.pack("<HHH", w, h, d) + pixels
+        num_blobs = (len(packet) // max_blob_size) + 1
+        for i in xrange(num_blobs):
+            print "Send blob: [%d : %d]" % (i * max_blob_size, (i+1) * max_blob_size)
+            if not self.send_packet(packet[i * max_blob_size : (i+1) * max_blob_size]):
+                print "Failed to send image blob"
+                return False
+
+    def send_packet(self, packet):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)
         crc = 0
-        packet = struct.pack("<HHH", w, h, d) + pixels
         for ch in packet:
             crc = crc16_update(crc, ord(ch))
 
+        print "packet len: %d %X" % (len(packet), len(packet))
         packet = pack("<I", len(packet)) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
-        while True:
-            for ch in packet:
-                while True:
-                    try:
-                        num = self.ser.write(ord(ch))
-                        if num == 1:
-                            break
-                        print "write fail, retry"
-                    except SerialTimeoutException:
-                        print "write timeout"
-                        sleep(.001)
-
+        for i, ch in enumerate(packet):
             while True:
                 try:
-                    ret = self.ser.read()
+                    num = self.ser.write(ch)
                     if num == 1:
                         break
-                    print "read fail, retry"
-                except SerialTimeoutException:
-                    print "read timeout"
+                    print "write fail, retry"
+                except serial.SerialTimeoutException:
+                    print "write timeout"
                     sleep(.001)
 
-            if ret == RECEIVE_PACKET_COMPLETE:
-                break
-
-            print "Received char %X. WTF?" % ch
+        self.ser.timeout = 1
+        ch = self.ser.read(1)
+        if ch and ord(ch) == RECEIVE_PACKET_COMPLETE:
+            print "Packet sent ok."
+            return True
+        if not ch:
+            print "No response!"
+            return False
+        else:
+            print "Packet response: %d" % ord(ch)
+            return False
 
 def read_image(image_file):
     r=png.Reader(file=open(image_file))
@@ -111,23 +144,57 @@ def read_image(image_file):
 
     return (x, y, pixels)
 
-if len(sys.argv) < 1:
+def make_test_image():
+    width = 100 
+    height = 144
+    pixels = ""
+    for y in xrange(height):
+        row = ""
+        for x in xrange(width):
+            if x % 2 == 0:
+                row += chr(255) + chr(0) + chr(0)
+            else:
+                row += chr(0) + chr(0) + chr(255)
+        pixels += row
+
+    return (width, height, pixels)
+
+def rotate_image(width, height, pixels):
+
+    new_pixels = ""
+    for x in xrange(width):
+        line = ""
+        for y in xrange(height):
+            line += pixels[y * width * 3 + (x * 3)]
+            line += pixels[y * width * 3 + (x * 3) + 1]
+            line += pixels[y * width * 3 + (x * 3) + 2]
+
+        new_pixels += line
+
+    return new_pixels
+
+def dump_image(width, height, pixels):
+    t_pixels = ""
+    for x in xrange(width):
+        txt = ""
+        for y in xrange(height):
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3)]) 
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 1]) 
+            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 2]) 
+
+        t_pixels += txt + "\n"
+    print t_pixels
+
+if len(sys.argv) < 2:
+    print "Usage: driver.py <png file>"
     sys.exit(1)
 
-width = 20
-height = 20
-pixels = ""
-for y in xrange(height):
-    row = ""
-    for x in xrange(width):
-        if ((x + y) % 2 == 0):
-            row += chr(255) + chr(255) + chr(0)
-        else:
-            row += chr(255) + chr(0) + chr(255)
-    pixels += row
+width, height, pixels = read_image(sys.argv[1]);
+#width, height, pixels = make_test_image()
 
-num_leds = 72
-driver = Driver("/dev/ttyACM0", num_leds, 0)
+#pixels = rotate_image(width, height, pixels)
+
+driver = Driver("/dev/ttyAMA0", 0)
 print "open port"
 driver.open()
 print "send image"
