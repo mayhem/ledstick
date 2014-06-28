@@ -32,6 +32,12 @@ struct packet_t
   uint8_t   type;
 };
 
+struct static_bitmap_t
+{
+  uint16_t           w, h;
+  const prog_uchar  *pixels;
+}; 
+
 struct bitmap_t
 {
   uint16_t  w, h;
