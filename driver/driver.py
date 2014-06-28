@@ -184,7 +184,7 @@ def dump_image(pixels):
     for i, p in enumerate(pixels):
         if i % 8 == 0:
             print "\n%08X " % i,
-        print "%02X " % ord(p),
+        print "%03d " % ord(p),
     print
     print "%d bytes" % len(pixels)
 
@@ -196,7 +196,7 @@ width, height, pixels = read_image(sys.argv[1]);
 #width, height, pixels = make_test_image()
 
 pixels = rotate_image(width, height, pixels)
-dump_image(struct.pack("<HH", width, height) + pixels)
+#dump_image(struct.pack("<HH", width, height) + pixels)
 
 driver = Driver("/dev/ttyAMA0", 0)
 print "open port"
