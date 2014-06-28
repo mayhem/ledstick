@@ -4,6 +4,7 @@
 #include <avr/pgmspace.h>
 
 #include "ledstick.h" 
+#include "bitmaps.h"
 
 #define DEVICE_HEIGHT 144
 
@@ -77,6 +78,26 @@ void set_color(uint8_t r, uint8_t g, uint8_t b)
     strip.show();
 }
 
+void show_static_col(uint8_t index, uint16_t col)
+{
+    uint16_t row, offset;
+    uint16_t width, height;
+    uint8_t pixel, red, green, blue;
+    
+    width = static_bitmaps[index].w;
+    height = static_bitmaps[index].h;
+    offset = height * 3 * col;
+    for(row = 0; row < height; row++)    
+    {
+        red = pgm_read_byte_near(static_bitmaps[index].pixels + offset + (row * 3));
+        green = pgm_read_byte_near(static_bitmaps[index].pixels + offset + (row * 3) + 1);
+        blue = pgm_read_byte_near(static_bitmaps[index].pixels + offset + (row * 3) + 2);
+        strip.setPixelColor(height - row - 1, red / 3, green / 3, blue / 3); 
+    }
+    strip.show(); 
+}
+
+int skip = 0;
 void show_col(uint8_t index, uint16_t col)
 {
     uint16_t row, offset;
@@ -88,9 +109,10 @@ void show_col(uint8_t index, uint16_t col)
     offset = height * 3 * col;
     for(row = 0; row < height; row++)    
     {
-        red = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3));
-        green = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3) + 1);
-        blue = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3) + 2);
+        red = *((char *)bitmaps[index].pixels + offset + (row * 3));
+        green = *((char *)bitmaps[index].pixels + offset + (row * 3) + 1);
+        blue = *((char *)bitmaps[index].pixels + offset + (row * 3) + 2);
+        
         strip.setPixelColor(height - row - 1, red / 3, green / 3, blue / 3); 
     }
     strip.show(); 
@@ -117,10 +139,6 @@ int receive_char(char ch, char *packet, uint16_t *len)
     static char *ptr = 0;
     static uint16_t sent_crc;
     
-    //Serial.print(num_received, DEC);
-    //Serial.print(" ");
-    //Serial.println(ch, DEC);
-    
     // If this is the first character, set pointer to begin of bitmap
     if (num_received == 0)
         ptr = (char *)len;
@@ -141,8 +159,6 @@ int receive_char(char ch, char *packet, uint16_t *len)
  
     if (num_received == sizeof(uint16_t))
     {
-       Serial.print("packet len ");
-       Serial.println(*len, DEC);
        if (*len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
@@ -167,14 +183,7 @@ int receive_char(char ch, char *packet, uint16_t *len)
        ptr = NULL;
        
        for(i = 0, crc_ptr = packet; i < *len; i++, crc_ptr++)
-           crc = crc16_update(crc, *crc_ptr);
-       
-       Serial.print("sent crc ");
-       Serial.println(sent_crc, HEX);
-       Serial.print("     crc ");
-       Serial.println(crc, HEX);
-       Serial.print("received: ");
-       Serial.println(total_bytes, DEC);       
+           crc = crc16_update(crc, *crc_ptr);     
 
        if (crc != sent_crc)
        {
@@ -261,7 +270,6 @@ void serialEvent1()
                      header_count = 0;
                      blob_offset = 0;
                      total_len = 0;
-                     Serial.println("going into blob mode");
                 } 
             }
             reset_receive();         
@@ -274,28 +282,21 @@ void serialEvent1()
         
             if (response == RECEIVE_PACKET_COMPLETE)
             {
-                Serial.print("received packet ");
-                Serial.println(blob_offset);
-                Serial.print("width: ");
-                Serial.println(bitmaps[0].w);
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
                 {
                      total_len += len;
                      if (len == BYTES_PER_BLOB)
                      {
-                         Serial.println("received full blob");
                          blob_offset += len;
                          len = 0;
                          header_count = 0;
                      }
                      else
                      {
-                         Serial.print("received partial blob, leaving blob mode ");
-                         //Serial.println(total_len);
-                         //dumpImage(total_len, (char *)&bitmaps[0]);
                          blob_mode = 0;
                          len = 0;
                          header_count = 0;
+                         cur_width = bitmaps[0].w;
                          show_image = 1;
 
                      }
@@ -353,7 +354,7 @@ void loop()
 
     if (!show_image)
         return;
-    
+        
     show_col(image, col);
     col++;
     delayMicroseconds(200);
@@ -362,7 +363,7 @@ void loop()
         set_color(0, 0, 0);
         delay(50);
         col = 0;
-        pass++;
+        //pass++;
         if (pass == 20)
         {
            image = (image+1) % num_bitmaps;

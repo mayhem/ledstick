@@ -53,7 +53,7 @@ def print_image_file(img, index):
 
 def print_lookup_table(list):
     print "const int num_static_bitmaps = %d;" % len(list)
-    print "static_bitmap_t bitmaps[num_static_bitmaps] = "
+    print "static_bitmap_t static_bitmaps[num_static_bitmaps] = "
     print "{"
     for i, img in enumerate(list):
         print "   { width_%d, height_%d, image_%d }," % (i, i, i)
