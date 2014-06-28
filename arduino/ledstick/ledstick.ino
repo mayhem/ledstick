@@ -10,7 +10,6 @@
 // bitmap stuff
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(DEVICE_HEIGHT, 2, NEO_GRB + NEO_KHZ800);
 
-
 // Time keeping
 Timer t;
 uint32_t ticks = 0;
@@ -19,16 +18,16 @@ uint16_t cur_width = 0;
 
 // Communication stuff
 
-const int num_bitmaps = 1;
+const int num_bitmaps = 2;
 bitmap_t bitmaps[num_bitmaps];
-int count = 0;
-int total = -1;
+int total_bytes = 0;
 int header_count = 0;
 uint32_t timeout = 0;
 int num_received = 0;
 const char header[HEADER_LEN] = { 0xF0, 0x0F, 0x0F, 0xF0 };
 uint8_t response = RECEIVE_NO_STATUS;
 int show_image = 0;
+const int led = 13;
 
 void tick()
 {
@@ -114,7 +113,6 @@ uint16_t crc16_update(uint16_t crc, uint8_t a)
 
 int receive_char(char ch, bitmap_t &bitmap)
 {
-    static int total = 0;
     static char *ptr = 0;
     static uint16_t sent_crc;
     
@@ -122,10 +120,10 @@ int receive_char(char ch, bitmap_t &bitmap)
     if (num_received == 0)
         ptr = (char *)&bitmap;
         
-    Serial.print("data: ");
-    Serial.print(num_received, DEC);
-    Serial.print(" ");  
-    Serial.println(ch, HEX);       
+    //Serial.print("data: ");
+    //Serial.print(num_received, DEC);
+    //Serial.print(" ");  
+    //Serial.println(ch, HEX);       
         
     // store the character    
     *ptr = ch;
@@ -135,7 +133,7 @@ int receive_char(char ch, bitmap_t &bitmap)
     if (num_received == 4) //sizeof(bitmap.len))
     {
        Serial.print("bitmap.len ");
-       Serial.println(bitmap.len, HEX);
+       Serial.println(bitmap.len, DEC);
        if (bitmap.len > MAX_PACKET_PAYLOAD)
        {
            num_received = 0;
@@ -146,12 +144,13 @@ int receive_char(char ch, bitmap_t &bitmap)
        
        show_image = 0;
        // total number of bytes to receive, including the crc checksum
-       total = sizeof(uint16_t) + bitmap.len + sizeof(uint16_t) + sizeof(uint16_t);
+       total_bytes = sizeof(uint16_t) + bitmap.len + sizeof(uint16_t) + sizeof(uint16_t);
        response = RECEIVE_NO_STATUS;
     }   
-    if (num_received == total - 1)
+    if (num_received == total_bytes - 1)
        *((char *)&sent_crc) = ch;
-    if (num_received == total)
+       
+    if (num_received == total_bytes)
     {
        uint16_t  crc = 0;
        char     *crc_ptr;
@@ -173,7 +172,7 @@ int receive_char(char ch, bitmap_t &bitmap)
        Serial.print("height: ");
        Serial.println(bitmap.h, DEC);
        Serial.print("received: ");
-       Serial.println(total, DEC);       
+       Serial.println(total_bytes, DEC);       
            
        for(i = 0; i < 3; i++)
        {
@@ -200,56 +199,56 @@ int receive_char(char ch, bitmap_t &bitmap)
     return RECEIVE_OK;
 }
 
-void serialEvent()
+void reset_receive()
+{
+    timeout = 0;
+    header_count = 0;
+    num_received = 0;
+    total_bytes = 0;
+    memset(&bitmaps[0], 0, sizeof(bitmap_t));
+}
+
+void serialEvent1()
 {
     int ret;
     char ch;
     
-    while (Serial.available()) 
+    while (Serial1.available()) 
     {
-        ch = Serial.read(); 
+        ch = Serial1.read(); 
         if (header_count < HEADER_LEN)
         {
-            //Serial.print(" hdr: ");
-            //Serial.print(header_count, DEC);
-            //Serial.print(" ");  
-            //Serial.println(ch, HEX); 
             if (ch == header[header_count])
             {
                 header_count++;
-                if (header_count == HEADER_LEN)
-                    set_color(0, 0, 0);
                 continue;
             }
             header_count = 0;
             continue;
         }
         if (header_count == HEADER_LEN)
+        {
+            //clear the timeout led
+            digitalWrite(led, LOW);
             timeout = ticks + 2;
-                      
+            
+            // so that this if doesn't fire again
+            header_count++;
+        }
+        
         response = receive_char(ch, bitmaps[0]);
         if (response == RECEIVE_OK)
             continue;
         
+        Serial1.write(response);
         if (response == RECEIVE_PACKET_COMPLETE)
-        {
             show_image = 1;
-            timeout = 0;
-            header_count = 0;
-            return;
-        } 
-        if (response == RECEIVE_ABORT_PACKET_CRC || response == RECEIVE_ABORT_PACKET)
-        {
-            timeout = 0;
-            header_count = 0;
-            continue;
-        }
-  
+
+        reset_receive();
     }
     return;
 }
 
-const int led = 13;
 void setup() 
 { 
     int i;
@@ -265,7 +264,8 @@ void setup()
         delay(100);
     }
   
-    Serial.begin(57600);
+    Serial.begin(115200);
+    Serial1.begin(115200);
     
     strip.begin();
 
@@ -273,6 +273,8 @@ void setup()
     
     cur_width = bitmaps[0].w;
     t.every(1000, tick);
+    
+    Serial.println("ledstick!");
 }
 
 void loop()
@@ -285,13 +287,13 @@ void loop()
     {
         Serial.print("timeout -- received: ");
         Serial.println(num_received, DEC);
-        timeout = 0;
-        num_received = 0;
+        digitalWrite(led, HIGH);
+        reset_receive();
         response = RECEIVE_TIMEOUT;
     }  
 
-    if (!show_image)
-        return;
+    //if (!show_image)
+    return;
     
     show_col(image, col);
     col++;
