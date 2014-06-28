@@ -147,7 +147,6 @@ int receive_char(char ch, char *packet, uint16_t *len)
        {
            num_received = 0;
            ptr = NULL;
-           Serial.write("-- abort packet\n");
            Serial1.write(RECEIVE_ABORT_PACKET);
            return RECEIVE_ABORT_PACKET;
        }
@@ -210,7 +209,8 @@ void dumpImage(uint16_t len, char*image)
               Serial.print(i, HEX);
               Serial.print(" ");
          }
-         Serial.print(image[i]);     
+         Serial.print(image[i], HEX);   
+         Serial.print(" ");  
     }
     Serial.println("");
     Serial.println(len);
@@ -221,7 +221,7 @@ void serialEvent1()
     int               ret;
     char              ch;
     static   packet_t packet;
-    static   uint16_t len = 0, blob_offset = 0;
+    static   uint16_t len = 0, blob_offset = 0, total_len = 0;
     
     while (Serial1.available()) 
     {
@@ -260,6 +260,7 @@ void serialEvent1()
                      len = 0;
                      header_count = 0;
                      blob_offset = 0;
+                     total_len = 0;
                      Serial.println("going into blob mode");
                 } 
             }
@@ -279,6 +280,7 @@ void serialEvent1()
                 Serial.println(bitmaps[0].w);
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
                 {
+                     total_len += len;
                      if (len == BYTES_PER_BLOB)
                      {
                          Serial.println("received full blob");
@@ -288,8 +290,9 @@ void serialEvent1()
                      }
                      else
                      {
-                         Serial.println("received partial blob, leaving blob mode");
-                         dumpImage(len, (char *)&bitmaps[0]);
+                         Serial.print("received partial blob, leaving blob mode ");
+                         //Serial.println(total_len);
+                         //dumpImage(total_len, (char *)&bitmaps[0]);
                          blob_mode = 0;
                          len = 0;
                          header_count = 0;
