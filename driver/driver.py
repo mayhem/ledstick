@@ -18,6 +18,13 @@ RECEIVE_PACKET_COMPLETE  = 3
 RECEIVE_NO_STATUS        = 4
 RECEIVE_TIMEOUT          = 5
 
+PACKET_OFF            =  0
+PACKET_SHOW_IMAGE_0   =  1
+PACKET_SHOW_IMAGE_1   =  2
+PACKET_LOAD_IMAGE_0   =  3
+PACKET_LOAD_IMAGE_1   =  4
+PACKET_IMAGE_BLOB     =  5
+
 def crc16_update(crc, a):
     crc ^= a
     for i in xrange(0, 8):
@@ -73,18 +80,17 @@ class Driver(object):
         if len(ret) > 0:
            print ret, 
 
-    def send_cmd(self, type):
-        packet = struct.pack("<c", cmd 
-        self.send_packet(packet)
+    def send_cmd(self, cmd):
+        packet = struct.pack("<c", chr(cmd))
+        return self.send_packet(packet)
 
-
-    def send_image(self, w, h, d, pixels):
+    def send_image(self, w, h, pixels):
         if not self.send_cmd(PACKET_LOAD_IMAGE_1):
             print "Failed to send load command"
             return False
 
         max_blob_size = 10240
-        packet = struct.pack("<HHH", w, h, d) + pixels
+        packet = struct.pack("<HH", w, h) + pixels
         num_blobs = (len(packet) // max_blob_size) + 1
         for i in xrange(num_blobs):
             print "Send blob: [%d : %d]" % (i * max_blob_size, (i+1) * max_blob_size)
@@ -99,7 +105,7 @@ class Driver(object):
             crc = crc16_update(crc, ord(ch))
 
         print "packet len: %d %X" % (len(packet), len(packet))
-        packet = pack("<I", len(packet)) + packet + pack("<H", crc)
+        packet = pack("<H", len(packet)) + packet + pack("<H", crc)
         packet = chr(0) + chr(0) + header + packet
 
         for i, ch in enumerate(packet):
@@ -173,17 +179,14 @@ def rotate_image(width, height, pixels):
 
     return new_pixels
 
-def dump_image(width, height, pixels):
+def dump_image(pixels):
     t_pixels = ""
-    for x in xrange(width):
-        txt = ""
-        for y in xrange(height):
-            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3)]) 
-            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 1]) 
-            txt += "%03d " % ord(pixels[y * width * 3 + (x * 3) + 2]) 
-
-        t_pixels += txt + "\n"
-    print t_pixels
+    for i, p in enumerate(pixels):
+        if i % 8 == 0:
+            print "\n%08X " % i,
+        print "%02X " % ord(p),
+    print
+    print "%d bytes" % len(pixels)
 
 if len(sys.argv) < 2:
     print "Usage: driver.py <png file>"
@@ -192,11 +195,12 @@ if len(sys.argv) < 2:
 width, height, pixels = read_image(sys.argv[1]);
 #width, height, pixels = make_test_image()
 
-#pixels = rotate_image(width, height, pixels)
+pixels = rotate_image(width, height, pixels)
+dump_image(struct.pack("<HH", width, height) + pixels)
 
 driver = Driver("/dev/ttyAMA0", 0)
 print "open port"
 driver.open()
 print "send image"
-driver.send_image(width, height, 100, pixels)
+driver.send_image(width, height, pixels)
 print "done"
