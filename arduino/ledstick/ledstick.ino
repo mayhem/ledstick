@@ -91,7 +91,7 @@ void show_col(uint8_t index, uint16_t col)
         red = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3));
         green = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3) + 1);
         blue = pgm_read_byte_near(bitmaps[index].pixels + offset + (row * 3) + 2);
-        strip.setPixelColor(height - row, red / 3, green / 3, blue / 3); 
+        strip.setPixelColor(height - row - 1, red / 3, green / 3, blue / 3); 
     }
     strip.show(); 
 }
@@ -126,7 +126,10 @@ int receive_char(char ch, char *packet, uint16_t *len)
         ptr = (char *)len;
     else    
     if (num_received == sizeof(uint16_t))
+    {
         ptr = packet;
+        Serial.println((long int)ptr, HEX);
+    }
     else
     if (num_received > sizeof(uint16_t) && num_received == *len + 2)
         ptr = (char *)&sent_crc;
@@ -173,15 +176,6 @@ int receive_char(char ch, char *packet, uint16_t *len)
        Serial.println(crc, HEX);
        Serial.print("received: ");
        Serial.println(total_bytes, DEC);       
-           
-       Serial.print("data: ");
-       Serial.print(i, DEC);
-       Serial.print(" ");  
-       Serial.print(packet[0], HEX);    
-       Serial.print(" ");  
-       Serial.print(packet[1], HEX);  
-       Serial.print(" ");  
-       Serial.println(packet[2], HEX); 
 
        if (crc != sent_crc)
        {
@@ -202,7 +196,24 @@ void reset_receive()
     header_count = 0;
     num_received = 0;
     total_bytes = 0;
-    memset(&bitmaps[0], 0, sizeof(bitmap_t));
+}
+
+void dumpImage(uint16_t len, char*image)
+{
+    uint16_t i;
+    
+    for(i = 0; i < len; i++)
+    {
+         if (i % 8 == 0)
+         {
+              Serial.println("");
+              Serial.print(i, HEX);
+              Serial.print(" ");
+         }
+         Serial.print(image[i]);     
+    }
+    Serial.println("");
+    Serial.println(len);
 }
 
 void serialEvent1()
@@ -262,6 +273,10 @@ void serialEvent1()
         
             if (response == RECEIVE_PACKET_COMPLETE)
             {
+                Serial.print("received packet ");
+                Serial.println(blob_offset);
+                Serial.print("width: ");
+                Serial.println(bitmaps[0].w);
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
                 {
                      if (len == BYTES_PER_BLOB)
@@ -274,9 +289,12 @@ void serialEvent1()
                      else
                      {
                          Serial.println("received partial blob, leaving blob mode");
+                         dumpImage(len, (char *)&bitmaps[0]);
                          blob_mode = 0;
                          len = 0;
                          header_count = 0;
+                         show_image = 1;
+
                      }
                 } 
             }
@@ -330,8 +348,8 @@ void loop()
         response = RECEIVE_TIMEOUT;
     }  
 
-    //if (!show_image)
-    return;
+    if (!show_image)
+        return;
     
     show_col(image, col);
     col++;

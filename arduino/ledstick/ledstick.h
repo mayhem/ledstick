@@ -35,7 +35,6 @@ struct packet_t
 struct bitmap_t
 {
   uint16_t  w, h;
-  uint16_t  col_delay;
   color_t   pixels[MAX_HEIGHT * MAX_WIDTH];
 };
 
