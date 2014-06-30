@@ -25,6 +25,8 @@ PACKET_LOAD_IMAGE_0   =  3
 PACKET_LOAD_IMAGE_1   =  4
 PACKET_IMAGE_BLOB     =  5
 
+MAX_BLOB_SIZE = 4096
+
 def crc16_update(crc, a):
     crc ^= a
     for i in xrange(0, 8):
@@ -89,12 +91,11 @@ class Driver(object):
             print "Failed to send load command"
             return False
 
-        max_blob_size = 10240
         packet = struct.pack("<HH", w, h) + pixels
-        num_blobs = (len(packet) // max_blob_size) + 1
+        num_blobs = (len(packet) // MAX_BLOB_SIZE) + 1
         for i in xrange(num_blobs):
-            print "Send blob: [%d : %d]" % (i * max_blob_size, (i+1) * max_blob_size)
-            if not self.send_packet(packet[i * max_blob_size : (i+1) * max_blob_size]):
+            print "Send blob: [%d : %d]" % (i * MAX_BLOB_SIZE, (i+1) * MAX_BLOB_SIZE)
+            if not self.send_packet(packet[i * MAX_BLOB_SIZE : (i+1) * MAX_BLOB_SIZE]):
                 print "Failed to send image blob"
                 return False
 
