@@ -385,6 +385,40 @@ void show_percent_complete(uint8_t percent)
     strip.show();
 }
 
+void show_sparkle_animation(void)
+{
+    uint8_t i, color_index = 0;
+    
+    for(;;)
+    {
+      for(i = 0; i < DEVICE_HEIGHT; i++)
+          strip.setPixelColor(i, 0,0,0);
+      for(i = 0; i < 8; i++)
+          strip.setPixelColor(random(DEVICE_HEIGHT), color_wheel(color_index));
+      color_index++;
+      strip.show();
+      delay(50);
+    }
+}
+
+uint32_t color_wheel(byte wheel_pos) 
+{
+    if(wheel_pos < 85) 
+    {
+       return strip.Color(wheel_pos * 3, 255 - wheel_pos * 3, 0);
+    } 
+    else 
+    if (wheel_pos < 170) 
+    {
+       wheel_pos -= 85;
+       return strip.Color(255 - wheel_pos * 3, 0, wheel_pos * 3);
+    } 
+    else 
+    {
+       wheel_pos -= 170;
+       return strip.Color(0, wheel_pos * 3, 255 - wheel_pos * 3);
+    }
+}
 
 void tick()
 {
@@ -404,6 +438,7 @@ void setup()
 
     Serial.println("\ndas blinkenstick!");
     startup_animation();
+    show_sparkle_animation();
 }
 
 void loop()
