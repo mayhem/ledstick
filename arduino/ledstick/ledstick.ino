@@ -28,25 +28,38 @@ uint8_t io_response = RECEIVE_NO_STATUS;
 
 // bitmap related stuff -- note this also includes static bitmaps from bitmaps.h!
 const int num_bitmaps = 2;
+int loaded_bitmaps = 0;
 bitmap_t bitmaps[num_bitmaps];
 
 // slicer
-uint8_t slicer_show_image = 0;
+uint8_t slicer_show_image = 1;
 uint8_t slicer_image_index = 0;
-uint8_t slicer_image_static = 0;
+uint8_t slicer_image_static = 1;
 uint8_t slicer_col_index = 0;
+uint8_t slicer_pass = 0;
 
-void slicer_change_image(uint8_t index, uint8_t stat)
+void slicer_select_image(uint8_t index, uint8_t stat)
 {
     slicer_show_on(0);
-   
     slicer_image_index = index;
-    slicer_image_static = stat; 
+    slicer_image_static = stat;
+    slicer_pass = 0;
+    slicer_show_on(1);
 }
 
 void slicer_show_on(uint8_t state)
 {
     slicer_show_image = state;
+    if (!state)
+    {
+        slicer_col_index = 0;
+        show_color(20, 10, 80);
+    }
+}
+
+uint8_t slicer_is_on(void)
+{
+    return slicer_show_image;
 }
 
 void slicer_next_image(void)
@@ -63,7 +76,7 @@ void slicer_next_image(void)
      }
      else
      {
-         if (slicer_image_index == num_bitmaps)
+         if (slicer_image_index == loaded_bitmaps)
          {
              slicer_image_index = 0;
              slicer_image_static = 1;
@@ -73,13 +86,11 @@ void slicer_next_image(void)
 
 uint8_t slicer_get_cur_width(void)
 {
-    return slicer_image_static ? bitmaps[slicer_image_index].w : static_bitmaps[slicer_image_index].w; 
+    return slicer_image_static ? static_bitmaps[slicer_image_index].w : bitmaps[slicer_image_index].w; 
 }
 
 void slicer_loop(void)
-{
-    static uint8_t pass = 0;
-    
+{  
     if (!slicer_show_image)
         return;
         
@@ -88,14 +99,14 @@ void slicer_loop(void)
     delayMicroseconds(200);
     if (slicer_col_index == slicer_get_cur_width())
     {
-        set_color(0, 0, 0);
+        show_color(0, 0, 0);
         delay(50);
         slicer_col_index = 0;
-        pass++;
-        if (pass == 20)
+        slicer_pass++;
+        if (slicer_pass == 20)
         {
            slicer_next_image();
-           pass = 0;
+           slicer_pass = 0;
         }
     }   
 }
@@ -163,10 +174,7 @@ int io_receive_char(char ch, char *packet, uint16_t *len)
         ptr = (char *)len;
     else    
     if (io_num_received == sizeof(uint16_t))
-    {
         ptr = packet;
-        Serial.println((long int)ptr, HEX);
-    }
     else
     if (io_num_received > sizeof(uint16_t) && io_num_received == *len + 2)
         ptr = (char *)&sent_crc;
@@ -182,7 +190,6 @@ int io_receive_char(char ch, char *packet, uint16_t *len)
        {
            io_num_received = 0;
            ptr = NULL;
-           Serial1.write(RECEIVE_ABORT_PACKET);
            return RECEIVE_ABORT_PACKET;
        }
        
@@ -205,12 +212,8 @@ int io_receive_char(char ch, char *packet, uint16_t *len)
            crc = io_crc16_update(crc, *crc_ptr);     
 
        if (crc != sent_crc)
-       {
-           Serial1.write(RECEIVE_ABORT_PACKET_CRC);
            return RECEIVE_ABORT_PACKET_CRC;
-       }    
 
-       Serial1.write(RECEIVE_PACKET_COMPLETE);
        return RECEIVE_PACKET_COMPLETE;
     } 
   
@@ -234,6 +237,9 @@ void serialEvent1()
     
     while (Serial1.available()) 
     {
+        if (slicer_is_on())
+            slicer_show_on(0);
+            
         ch = Serial1.read(); 
         if (io_header_count < HEADER_LEN)
         {
@@ -260,7 +266,8 @@ void serialEvent1()
             io_response = io_receive_char(ch, (char *)&packet, &len);
             if (io_response == RECEIVE_OK)
                 continue;
-        
+                
+            Serial1.write(io_response);
             if (io_response == RECEIVE_PACKET_COMPLETE)
             {
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
@@ -280,8 +287,21 @@ void serialEvent1()
             if (io_response == RECEIVE_OK)
                 continue;
         
-            if (io_response == RECEIVE_PACKET_COMPLETE)
+            if (io_response == RECEIVE_PACKET_COMPLETE &&  
+               (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1))
             {
+                 int total = bitmaps[0].w * bitmaps[0]. h * 3;
+                 int percent = 100 * (blob_offset + len) / total;
+                 show_percent_complete(percent);
+                 Serial.println("total: " + String(total));
+                 Serial.println("len: " + String(len));
+                 Serial.println(percent);
+                 Serial.println();
+            }  
+               
+            Serial1.write(io_response);
+            if (io_response == RECEIVE_PACKET_COMPLETE)
+            {           
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
                 {
                      total_len += len;
@@ -296,7 +316,8 @@ void serialEvent1()
                          io_blob_mode = 0;
                          len = 0;
                          io_header_count = 0;
-                         slicer_show_on(1);
+                         loaded_bitmaps = 1;
+                         slicer_select_image(0, 0);
                      }
                 } 
             }
@@ -336,10 +357,10 @@ void startup_animation(void)
         strip.show();
         delay(100);
     }
-    set_color(0, 0, 0);
+    show_color(0, 0, 0);
 }
 
-void set_color(uint8_t r, uint8_t g, uint8_t b)
+void show_color(uint8_t r, uint8_t g, uint8_t b)
 {
     uint8_t j;
     
@@ -347,6 +368,23 @@ void set_color(uint8_t r, uint8_t g, uint8_t b)
         strip.setPixelColor(j, r, g, b);
     strip.show();
 }
+
+void show_percent_complete(uint8_t percent)
+{
+    uint8_t i;
+    int threshold;
+    
+    threshold = (int)percent * DEVICE_HEIGHT / 100;
+    for(i = 0; i < DEVICE_HEIGHT; i++)
+    {
+        if (i >= threshold)
+            strip.setPixelColor(i, 20, 10, 80);
+        else
+            strip.setPixelColor(i, 10, 80, 20);    
+    }
+    strip.show();
+}
+
 
 void tick()
 {
@@ -364,7 +402,7 @@ void setup()
     
     t.every(1000, tick);
 
-    Serial.println("ledstick!");
+    Serial.println("\ndas blinkenstick!");
     startup_animation();
 }
 

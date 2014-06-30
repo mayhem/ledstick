@@ -20,7 +20,7 @@
 #define PACKET_LOAD_IMAGE_1      4
 #define PACKET_IMAGE_BLOB        5
 
-#define BYTES_PER_BLOB           10240
+#define BYTES_PER_BLOB           4096
 
 struct color_t
 {
