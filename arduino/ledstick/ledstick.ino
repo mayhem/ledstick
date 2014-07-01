@@ -28,7 +28,6 @@ uint8_t io_response = RECEIVE_NO_STATUS;
 
 // bitmap related stuff -- note this also includes static bitmaps from bitmaps.h!
 const int num_bitmaps = 2;
-int loaded_bitmaps = 0;
 bitmap_t bitmaps[num_bitmaps];
 
 // slicer
@@ -38,6 +37,11 @@ uint8_t slicer_image_static = 1;
 uint8_t slicer_col_index = 0;
 uint8_t slicer_pass = 0;
 
+void slicer_setup(void)
+{
+    // clear the bitmaps and set widths to 0, which indicates its not loaded
+    memset(bitmaps, 0, sizeof(bitmaps));
+}
 void slicer_select_image(uint8_t index, uint8_t stat)
 {
     slicer_show_on(0);
@@ -64,23 +68,28 @@ uint8_t slicer_is_on(void)
 
 void slicer_next_image(void)
 {
-     slicer_image_index++;
-     if (slicer_image_static)
+     for(;;)
      {
-         
-         if (slicer_image_index == num_static_bitmaps)
-         {
-             slicer_image_index = 0;
-             slicer_image_static = 0;
+         slicer_image_index++;
+         if (slicer_image_static)
+         {         
+             if (slicer_image_index == num_static_bitmaps)
+             {
+                 slicer_image_index = 0;
+                 slicer_image_static = 0;
+             }
          }
-     }
-     else
-     {
-         if (slicer_image_index == loaded_bitmaps)
+         else
          {
-             slicer_image_index = 0;
-             slicer_image_static = 1;
+             if (slicer_image_index == num_bitmaps)
+             {
+                 slicer_image_index = 0;
+                 slicer_image_static = 1;
+             }
          }
+         if (!slicer_image_static && bitmaps[slicer_image_index].w == 0)
+             continue;    
+         break;
      }
 }
 
@@ -124,8 +133,8 @@ void _slicer_show_col(uint8_t index, uint16_t col, uint8_t stat)
     }    
     else
     {
-        width = static_bitmaps[index].w;
-        height = static_bitmaps[index].h;
+        width = bitmaps[index].w;
+        height = bitmaps[index].h;
     }  
     
     offset = height * 3 * col;
@@ -230,10 +239,11 @@ void io_reset_receive()
 
 void serialEvent1()
 {
-    int               ret;
-    char              ch;
-    static   packet_t packet;
-    static   uint16_t len = 0, blob_offset = 0, total_len = 0;
+    int                ret;
+    char               ch;
+    static   packet_t  packet;
+    static   uint16_t  len = 0, blob_offset = 0, total_len = 0;
+    static   bitmap_t *dest_bitmap = NULL;
     
     while (Serial1.available()) 
     {
@@ -272,6 +282,7 @@ void serialEvent1()
             {
                 if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
                 {
+                     dest_bitmap = packet.type == PACKET_LOAD_IMAGE_0 ? &bitmaps[0] : &bitmaps[1];
                      io_blob_mode = 1;
                      len = 0;
                      io_header_count = 0;
@@ -283,20 +294,17 @@ void serialEvent1()
         }
         else
         {
-            io_response = io_receive_char(ch, ((char *)&bitmaps[0]) + blob_offset, &len);
+            io_response = io_receive_char(ch, (char *)dest_bitmap + blob_offset, &len);
             if (io_response == RECEIVE_OK)
                 continue;
         
             if (io_response == RECEIVE_PACKET_COMPLETE &&  
                (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1))
-            {
-                 int total = bitmaps[0].w * bitmaps[0]. h * 3;
+            { 
+                 
+                 int total = dest_bitmap->w * dest_bitmap->h * 3;
                  int percent = 100 * (blob_offset + len) / total;
                  show_percent_complete(percent);
-                 Serial.println("total: " + String(total));
-                 Serial.println("len: " + String(len));
-                 Serial.println(percent);
-                 Serial.println();
             }  
                
             Serial1.write(io_response);
@@ -313,11 +321,16 @@ void serialEvent1()
                      }
                      else
                      {
+                         
+                         dest_bitmap = NULL;
                          io_blob_mode = 0;
                          len = 0;
                          io_header_count = 0;
-                         loaded_bitmaps = 1;
-                         slicer_select_image(0, 0);
+
+                         if (packet.type == PACKET_LOAD_IMAGE_0)
+                             slicer_select_image(0, 0);
+                         else
+                             slicer_select_image(1, 0);
                      }
                 } 
             }
@@ -438,7 +451,7 @@ void setup()
 
     Serial.println("\ndas blinkenstick!");
     startup_animation();
-    show_sparkle_animation();
+    //show_sparkle_animation();
 }
 
 void loop()
@@ -450,6 +463,7 @@ void loop()
         io_reset_receive();
         io_blob_mode = 0;
         io_response = RECEIVE_TIMEOUT;
+        slicer_select_image(0, 1);
     }
   
     slicer_loop();   
