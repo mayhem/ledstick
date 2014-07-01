@@ -25,6 +25,27 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
+def get_image_uuids(page):
+    files = filter(os.path.isfile, glob.glob(os.path.join(UPLOAD_FOLDER, "*")))
+    file_list = []
+    for f in files:
+        d = os.path.getmtime(f)
+        file_list.append((os.path.basename(f),d))
+    file_list.sort(key=lambda x: x[1], reverse=True)
+
+    uuids = [ os.path.basename(f[0]).split(".")[0] for f in file_list[page * PAGE_SIZE : page * PAGE_SIZE + PAGE_SIZE]]
+    return uuids, page < (len(file_list) // PAGE_SIZE) 
+
+def scale_image(filename, width):
+    tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()) + ".jpg")
+    print tf
+    try:
+        subprocess.check_call(["convert", filename, "-resize", "%d" % width, tf])
+        os.unlink(filename);
+    except subprocess.CalledProcessError:
+        os.unlink(filename);
+        raise BadRequest("Cannot process image. Please try uploading another image. Only .png, .jpg and .gif files are supported.") 
+
 @app.route("/")
 def index():
     return render_template("index")
@@ -33,44 +54,24 @@ def index():
 def upload():
     return render_template("upload")
 
-def get_image_urls(page):
-    files = filter(os.path.isfile, glob.glob(os.path.join(UPLOAD_FOLDER, "*")))
-    file_list = []
-    for f in files:
-        d = os.path.getmtime(f)
-        file_list.append((os.path.basename(f),d))
-    file_list.sort(key=lambda x: x[1], reverse=True)
-
-    urls = [ "/static/uploads/" + f[0] for f in file_list[page * PAGE_SIZE : page * PAGE_SIZE + PAGE_SIZE]]
-    return urls, page < (len(file_list) // PAGE_SIZE) 
-
-def scale_image(filename, width):
-    tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    try:
-        subprocess.check_call(["convert", "-size", "%d" % width, filename, "-resize", "%d" % width, tf])
-        os.unlink(filename);
-        os.rename(tf, filename)
-    except subprocess.CalledProcessError:
-        pass
-
 @app.route("/images")
 def images():
-    urls, have_more = get_image_urls(0)
+    uuids, have_more = get_image_uuids(0)
     if have_more:
         next_page = 1
     else:
         next_page = 0
-    return render_template("images", urls=urls, next_page=index)
+    return render_template("images", uuids=uuids, next_page=index)
 
 @app.route("/images/<int:page>")
 def image(page):
-    urls, have_more = get_image_urls(page)
+    uuids, have_more = get_image_uuids(page)
     if have_more:
         next_page = page + 1
     else:
         next_page = 0
 
-    return render_template("image", urls=urls, next_page=next_page)
+    return render_template("image", uuids=uuids, next_page=next_page)
 
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():

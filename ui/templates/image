@@ -3,9 +3,9 @@
 {% block body %}
 <div>
     <div id="images">
-       {% for url in urls %}
+       {% for uuid in uuids %}
            <div class="image">
-               <img class="image" src="{{ url }}"></img>
+               <a href="/crop/{{ uuid }}"><img class="image" src="/static/uploads/{{ uuid }}.jpg"></img></a>
            </div>
        {% endfor %}
     </div>
