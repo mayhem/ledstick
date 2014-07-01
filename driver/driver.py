@@ -10,6 +10,10 @@ from struct import pack, unpack
 
 BAUD_RATE = 115200
 TIMEOUT   = .1
+MAX_WIDTH = 100
+MIN_WIDTH = 10
+MAX_HEIGHT = 144
+MIN_HEIGHT = 10
 
 RECEIVE_OK               = 0
 RECEIVE_ABORT_PACKET     = 1
@@ -86,8 +90,12 @@ class Driver(object):
         packet = struct.pack("<c", chr(cmd))
         return self.send_packet(packet)
 
-    def send_image(self, w, h, pixels):
-        if not self.send_cmd(PACKET_LOAD_IMAGE_1):
+    def send_image(self, index, w, h, pixels):
+        if index == 0:
+            cmd = PACKET_LOAD_IMAGE_0
+        else:
+            cmd = PACKET_LOAD_IMAGE_1
+        if not self.send_cmd(cmd):
             print "Failed to send load command"
             return False
 
@@ -189,19 +197,34 @@ def dump_image(pixels):
     print
     print "%d bytes" % len(pixels)
 
-if len(sys.argv) < 2:
-    print "Usage: driver.py <png file>"
+if len(sys.argv) < 3:
+    print "Usage: driver.py <index> <png file>"
     sys.exit(1)
 
-width, height, pixels = read_image(sys.argv[1]);
-#width, height, pixels = make_test_image()
+width, height, pixels = read_image(sys.argv[2]);
+print height
+if width < MIN_WIDTH:
+    print "Image is too narrow. Min %d pixels." % MIN_WIDTH
+    sys.exit(1)
+    
+if width > MAX_WIDTH:
+    print "Image is too wide. Max %d pixels." % MAX_WIDTH
+    sys.exit(1)
+
+if height < MIN_HEIGHT:
+    print "Image is too short. Min %d pixels." % MIN_HEIGHT
+    sys.exit(1)
+    
+if height > MAX_HEIGHT:
+    print "Image is too tall. Max %d pixels." % MAX_HEIGHT
+    sys.exit(1)
 
 pixels = rotate_image(width, height, pixels)
-#dump_image(struct.pack("<HH", width, height) + pixels)
 
 driver = Driver("/dev/ttyAMA0", 0)
 print "open port"
 driver.open()
 print "send image"
-driver.send_image(width, height, pixels)
+driver.send_image(int(sys.argv[1]), width, height, pixels)
 print "done"
+sys.exit(0)
