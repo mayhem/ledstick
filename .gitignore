@@ -3,4 +3,6 @@
 *.map
 *.obj
 *.swp
+*.pyc
 .DS_Store
+ui/static/uploads

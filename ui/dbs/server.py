@@ -23,7 +23,7 @@ app = Flask(__name__,
 
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_image_uuids(page):
     files = filter(os.path.isfile, glob.glob(os.path.join(UPLOAD_FOLDER, "*")))
@@ -72,6 +72,10 @@ def image(page):
         next_page = 0
 
     return render_template("image", uuids=uuids, next_page=next_page)
+
+@app.route("/crop/<uuid>")
+def crop(uuid):
+    return render_template("crop", uuid=uuid)
 
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():

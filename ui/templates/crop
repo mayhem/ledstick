@@ -1,0 +1,42 @@
+{% extends 'layout' %}
+{% set active = "upload" %}
+{% block body %}
+<div style="text-align: center">
+    <button id="crop" class="btn btn-warning btn-lg" onclick="crop()">
+    Crop image
+    </button>
+    <div id="image">
+       <img src="/static/uploads/{{ uuid }}.jpg" style="text-align: center">
+    </div>
+</div>
+
+<script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery.Jcrop.min.js"></script>
+<script type="text/javascript">
+
+var crop_x, crop_y, crop_w, crop_h;
+
+$(document).ready(function() {
+   $(function(){ $('#image').Jcrop( { 
+      aspectRatio: .694,
+      onSelect: set_coords}); });
+});
+
+function set_coords(c)
+{
+    crop_x = c.x;
+    crop_y = c.y;
+    crop_w = c.w;
+    crop_h = c.h;
+}
+
+function crop()
+{
+    console.log(parseInt(crop_x));
+    console.log(parseInt(crop_y));
+    console.log(parseInt(crop_w));
+    console.log(parseInt(crop_h));
+}
+
+</script>
+{% endblock %}
