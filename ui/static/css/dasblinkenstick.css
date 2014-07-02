@@ -25,3 +25,7 @@ body {
 .btn-warning:hover {
     color: #444;
 }
+
+#crop {
+    width: 100%;
+}

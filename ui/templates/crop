@@ -1,12 +1,12 @@
 {% extends 'layout' %}
-{% set active = "upload" %}
+{% set active = "images" %}
 {% block body %}
 <div style="text-align: center">
-    <button id="crop" class="btn btn-warning btn-lg" onclick="crop()">
+    <a id="crop-button" class="btn btn-warning btn-lg" style="width: 400px" onclick="crop_image()">
     Crop image
-    </button>
-    <div id="image">
-       <img src="/static/uploads/{{ uuid }}.jpg" style="text-align: center">
+    </a>
+    <div style="margin-top: 1em" >
+       <img id="crop" src="/static/uploads/{{ uuid }}.jpg">
     </div>
 </div>
 
@@ -14,12 +14,15 @@
 <script type="text/javascript" src="/static/js/jquery.Jcrop.min.js"></script>
 <script type="text/javascript">
 
-var crop_x, crop_y, crop_w, crop_h;
+var crop_x = -1, crop_y = -1, crop_w = -1, crop_h = -1;
 
-$(document).ready(function() {
-   $(function(){ $('#image').Jcrop( { 
+$(document).ready(function() 
+{
+   $('#crop').Jcrop( { 
       aspectRatio: .694,
-      onSelect: set_coords}); });
+      onSelect: set_coords
+   });
+   $("#crop-button").attr('disabled', 'disabled');
 });
 
 function set_coords(c)
@@ -28,10 +31,18 @@ function set_coords(c)
     crop_y = c.y;
     crop_w = c.w;
     crop_h = c.h;
+
+    if (crop_w > 10 && crop_h > 10)
+        $("#crop-button").removeAttr('disabled');
+    else
+        $("#crop-button").attr('disabled', 'disabled');
 }
 
-function crop()
+function crop_image()
 {
+    if (crop_x < 0)
+        return;
+
     console.log(parseInt(crop_x));
     console.log(parseInt(crop_y));
     console.log(parseInt(crop_w));
