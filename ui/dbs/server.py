@@ -40,7 +40,10 @@ def get_uuids(page, folder):
 def scale_image(filename, width):
     tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()) + ".jpg")
     try:
-        subprocess.check_call(["convert", filename, "-resize", "%d" % width, tf])
+        if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
+            subprocess.check_call(["epeg", "-m %d" % width, filename, tf])
+        else:
+            subprocess.check_call(["convert", filename, "-resize", "%d" % width, tf])
         os.unlink(filename);
     except subprocess.CalledProcessError:
         os.unlink(filename);

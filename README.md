@@ -10,3 +10,4 @@ program memory.
 Upload the sketch and run it!
 
 This code is setup for a 144 pixel NeoPixel strand of WS2811 led chips. Fun!
+
