@@ -1,26 +1,39 @@
 {% extends 'layout' %}
 {% set active = "index" %}
 {% block body %}
-<link rel="stylesheet" href="/static/css/spectrum.css" />
 <div>
-<ul class="nav nav-pills nav-stacked">
-  <li><a href="#">Rainbow animation</a></li>
-  <li><a href="#">Slow color fade</a></li>
-  <li><a href="#">Pick a color</a></li>
-</ul>
-<input type='text' class="colorpicker"/>
+    <div id="bitmaps">
+       {% for uuid in uuids %}
+           <div class="bitmap">
+               <a href="/load/{{ uuid }}"><img class="bitmap" src="/static/bitmaps/{{ uuid }}.png"></img></a>
+           </div>
+       {% else %}
+           <div class="alert alert-info error">
+               No bitmaps have been cropped. <a href="/images" class="alert-link">Get cropping!</a>
+           </div>
+       {% endfor %}
+    </div>
+
+    {% if next_page > 0 %}
+        <div id="pagination">
+            <a href="/images/1" class="next">next</a>
+        </div>
+    {% endif %}
 </div>
 <script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
-<script type="text/javascript" src="/static/js/spectrum.js"></script>
+<script type="text/javascript" src="/static/js/jquery-ias.min.js"></script>
 <script type="text/javascript">
 
 $(document).ready(function() {
-    $(".colorpicker").spectrum({
-          color: "#f00",
-          change: function(color) {
-               $("#basic-log").text("change called: " + color.toHexString());
-          }
-    });
+   var ias = jQuery.ias({
+                  container:  '#bitmaps',
+                  item:       '.bitmap',
+                  pagination: '#pagination',
+                  next:       '.next'
+   });
+   ias.extension(new IASSpinnerExtension({
+               src: '/static/images/spinner.gif'
+   }));
 });
 </script>
 {% endblock %}

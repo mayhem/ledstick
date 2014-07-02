@@ -1,0 +1,18 @@
+{% extends 'layout' %}
+{% set active = "index" %}
+{% block body %}
+<div>
+    <div id="bitmaps">
+       {% for uuid in uuids %}
+           <div class="image">
+               <a href="/load/{{ uuid }}"><img class="image" src="/static/bitmaps/{{ uuid }}.png"></img></a>
+           </div>
+       {% endfor %}
+    </div>
+    {% if next_page > 0 %}
+        <div id="pagination">
+            <a href="/images/{{ next_page }}" class="next">next</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

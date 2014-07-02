@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys, time, glob
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import BadRequest
 from stat import S_ISREG, ST_CTIME, ST_MODE
@@ -12,6 +12,7 @@ STATIC_PATH = "/static"
 STATIC_FOLDER = "../static"
 TEMPLATE_FOLDER = "../templates"
 UPLOAD_FOLDER = '../static/uploads'
+BITMAP_FOLDER = '../static/bitmaps'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 PAGE_SIZE = 5
 MAX_IMAGE_WIDTH=800
@@ -25,8 +26,8 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_uuids(page):
-    files = filter(os.path.isfile, glob.glob(os.path.join(UPLOAD_FOLDER, "*")))
+def get_uuids(page, folder):
+    files = filter(os.path.isfile, glob.glob(os.path.join(folder, "*")))
     file_list = []
     for f in files:
         d = os.path.getmtime(f)
@@ -38,7 +39,6 @@ def get_image_uuids(page):
 
 def scale_image(filename, width):
     tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()) + ".jpg")
-    print tf
     try:
         subprocess.check_call(["convert", filename, "-resize", "%d" % width, tf])
         os.unlink(filename);
@@ -46,17 +46,52 @@ def scale_image(filename, width):
         os.unlink(filename);
         raise BadRequest("Cannot process image. Please try uploading another image. Only .png, .jpg and .gif files are supported.") 
 
+def scale_and_crop_to_png(uuid, x, y, w, h):
+    sf = os.path.join(UPLOAD_FOLDER, uuid + ".jpg")
+    tf = os.path.join(BITMAP_FOLDER, uuid + ".png")
+    try:
+        subprocess.check_call(["convert", sf, "-crop", "%dx%d+%d+%d" % (w, h, x, y), "-resize", "x144", tf])
+    except subprocess.CalledProcessError, e:
+        raise BadRequest("Cannot crop image:" + str(e)) 
+
+def get_image_dims(uuid):
+    sf = os.path.join(UPLOAD_FOLDER, uuid + ".jpg")
+    try:
+        ret = subprocess.check_output(["identify", sf])
+        return ret.split(" ")[2].split("x")
+    except subprocess.CalledProcessError, e:
+        return 0, 0
+
 @app.route("/")
 def index():
-    return render_template("index")
+    uuids, have_more = get_uuids(0, BITMAP_FOLDER)
+    if have_more:
+        next_page = 1
+    else:
+        next_page = 0
+    return render_template("index", uuids=uuids, next_page=index)
+
+@app.route("/bitmaps/<int:page>")
+def image(page):
+    uuids, have_more = get_uuids(page, BITMAP_FOLDER)
+    if have_more:
+        next_page = page + 1
+    else:
+        next_page = 0
+
+    return render_template("bitmap", uuids=uuids, next_page=next_page)
 
 @app.route("/upload")
 def upload():
     return render_template("upload")
 
+@app.route("/other")
+def other():
+    return render_template("other")
+
 @app.route("/images")
 def images():
-    uuids, have_more = get_image_uuids(0)
+    uuids, have_more = get_uuids(0, UPLOAD_FOLDER)
     if have_more:
         next_page = 1
     else:
@@ -65,7 +100,7 @@ def images():
 
 @app.route("/images/<int:page>")
 def image(page):
-    uuids, have_more = get_image_uuids(page)
+    uuids, have_more = get_uuids(page, UPLOAD_FOLDER)
     if have_more:
         next_page = page + 1
     else:
@@ -75,7 +110,13 @@ def image(page):
 
 @app.route("/crop/<uuid>")
 def crop(uuid):
-    return render_template("crop", uuid=uuid)
+    w, h = get_image_dims(uuid)
+    return render_template("crop", uuid=uuid, width=w, height=h)
+
+@app.route("/crop/<uuid>/<int:x>/<int:y>/<int:w>/<int:h>")
+def crop_image(uuid, x, y, w, h):
+    scale_and_crop_to_png(uuid, x, y, w, h)
+    return redirect("/")
 
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():
@@ -88,4 +129,8 @@ def ws_upload():
     raise BadRequest("Unsupported file type")
 
 if __name__ == "__main__":
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.mkdir(UPLOAD_FOLDER)
+    if not os.path.exists(BITMAP_FOLDER):
+        os.mkdir(BITMAP_FOLDER)
     app.run(debug=True, host="0.0.0.0", port=8080)

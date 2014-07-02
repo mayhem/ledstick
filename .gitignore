@@ -6,3 +6,4 @@
 *.pyc
 .DS_Store
 ui/static/uploads
+ui/static/bitmaps

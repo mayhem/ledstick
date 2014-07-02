@@ -1,0 +1,26 @@
+{% extends 'layout' %}
+{% set active = "other" %}
+{% block body %}
+<link rel="stylesheet" href="/static/css/spectrum.css" />
+<div>
+<ul class="nav nav-pills nav-stacked">
+  <li><a href="#">Rainbow animation</a></li>
+  <li><a href="#">Slow color fade</a></li>
+  <li><a href="#">Pick a color</a></li>
+</ul>
+<input type='text' class="colorpicker"/>
+</div>
+<script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="/static/js/spectrum.js"></script>
+<script type="text/javascript">
+
+$(document).ready(function() {
+    $(".colorpicker").spectrum({
+          color: "#f00",
+          change: function(color) {
+               $("#basic-log").text("change called: " + color.toHexString());
+          }
+    });
+});
+</script>
+{% endblock %}

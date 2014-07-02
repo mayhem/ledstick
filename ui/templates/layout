@@ -4,6 +4,9 @@
     <title>Das Blinkenstick</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/dasblinkenstick.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.Jcrop.min.css" />
@@ -14,6 +17,7 @@
        <a href="/" class="btn btn-lg btn-default {% if active == "index" %}btn-warning{% endif %}">home</a>
        <a href="/images" class="btn btn-lg btn-default {% if active == "images" %}btn-warning{% endif %}">images</a>
        <a href="/upload" class="btn btn-lg btn-default {% if active == "upload" %}btn-warning{% endif %}">upload</a>
+       <a href="/other" class="btn btn-lg btn-default {% if active == "other" %}btn-warning{% endif %}">other</a>
     </div>
     <div class="container-fluid">
        {% block body %}{% endblock %}

@@ -27,10 +27,26 @@ $(document).ready(function()
 
 function set_coords(c)
 {
-    crop_x = c.x;
-    crop_y = c.y;
-    crop_w = c.w;
-    crop_h = c.h;
+    if ({{ width }} < $("#crop").width())
+    {
+        x_ratio = {{ width }} / $("#crop").width();
+        y_ratio = {{ height }} / $("#crop").height();
+    }
+    else
+    {
+        x_ratio = $("#crop").width() / {{ width }};
+        y_ratio = $("#crop").height() / {{ height }};
+    }
+    console.log("xr" + x_ratio);
+    console.log("yr" + y_ratio);
+    crop_x = (c.x * x_ratio).toFixed();
+    crop_y = (c.y * y_ratio).toFixed();
+    crop_w = (c.w * x_ratio).toFixed();
+    crop_h = (c.h * y_ratio).toFixed();
+    console.log(crop_x);
+    console.log(crop_y);
+    console.log(crop_w);
+    console.log(crop_h);
 
     if (crop_w > 10 && crop_h > 10)
         $("#crop-button").removeAttr('disabled');
@@ -43,11 +59,10 @@ function crop_image()
     if (crop_x < 0)
         return;
 
-    console.log(parseInt(crop_x));
-    console.log(parseInt(crop_y));
-    console.log(parseInt(crop_w));
-    console.log(parseInt(crop_h));
+    window.location = "/crop/{{ uuid }}/" + parseInt(crop_x) + "/"
+                                          + parseInt(crop_y) + "/"
+                                          + parseInt(crop_w) + "/"
+                                          + parseInt(crop_h);
 }
-
 </script>
 {% endblock %}
