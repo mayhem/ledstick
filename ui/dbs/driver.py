@@ -25,9 +25,8 @@ RECEIVE_TIMEOUT          = 5
 PACKET_OFF            =  0
 PACKET_SHOW_IMAGE_0   =  1
 PACKET_SHOW_IMAGE_1   =  2
-PACKET_LOAD_IMAGE_0   =  3
-PACKET_LOAD_IMAGE_1   =  4
-PACKET_IMAGE_BLOB     =  5
+PACKET_LOAD_IMAGE     =  3
+PACKET_IMAGE_BLOB     =  4
 
 MAX_BLOB_SIZE = 4096
 
@@ -89,11 +88,8 @@ class Driver(object):
         packet = struct.pack("<c", chr(cmd))
         return self.send_packet(packet)
 
-    def send_image(self, index, w, h, pixels):
-        if index == 0:
-            cmd = PACKET_LOAD_IMAGE_0
-        else:
-            cmd = PACKET_LOAD_IMAGE_1
+    def send_image(self, w, h, pixels):
+        cmd = PACKET_LOAD_IMAGE
         if not self.send_cmd(cmd):
             print "Failed to send load command"
             return False
@@ -105,6 +101,8 @@ class Driver(object):
             if not self.send_packet(packet[i * MAX_BLOB_SIZE : (i+1) * MAX_BLOB_SIZE]):
                 print "Failed to send image blob"
                 return False
+
+        return True
 
     def send_packet(self, packet):
         header = chr(0xF0) + chr(0x0F) + chr(0x0F) + chr(0xF0)

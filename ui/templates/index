@@ -55,7 +55,6 @@ $(document).ready(function() {
 
 function confirm_load(uuid)
 {
-    console.log("confirm " + uuid);
     $("#confirm-dialog").dialog({ buttons: [ 
                { text: "Yes", click: function() { $( this ).dialog( "close" ); send_image_to_stick(uuid) } },
                { text: "No", click: function() { $( this ).dialog( "close" ); } } 
@@ -64,7 +63,6 @@ function confirm_load(uuid)
 
 function send_image_to_stick(uuid)
 {
-    console.log("send " + uuid);
     $.ajax({
             url: "/load/" + uuid,
             success: function(html)
