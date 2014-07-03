@@ -42,9 +42,8 @@ def crc16_update(crc, a):
 
 class Driver(object):
 
-    def __init__(self, device, delay):
+    def __init__(self, device):
         self.device = device
-        self.delay = delay
         self.ser = None
 
     def open(self):
@@ -115,7 +114,10 @@ class Driver(object):
 
         print "packet len: %d %X" % (len(packet), len(packet))
         packet = pack("<H", len(packet)) + packet + pack("<H", crc)
-        packet = chr(0) + chr(0) + header + packet
+        packet = header + packet
+
+        self.ser.write(chr(0))
+        sleep(.1)
 
         for i, ch in enumerate(packet):
             while True:
@@ -140,91 +142,50 @@ class Driver(object):
             print "Packet response: %d" % ord(ch)
             return False
 
-def read_image(image_file):
-    r=png.Reader(file=open(image_file))
-    data = r.read()
-    x = data[0]
-    y = data[1]
+    def read_image(self, image_file):
+        r=png.Reader(file=open(image_file))
+        data = r.read()
+        x = data[0]
+        y = data[1]
 
-    pixels = ""
-    if data[3]['alpha']:
-        for row in data[2]:
-            for i in xrange(width):
-                pixels += chr(row[i * 4])
-                pixels += chr(row[i * 4 + 1])
-                pixels += chr(row[i * 4 + 2])
-    else:
-        for row in data[2]:
-            pixels += row.tostring()
+        pixels = ""
+        if data[3]['alpha']:
+            for row in data[2]:
+                for i in xrange(width):
+                    pixels += chr(row[i * 4])
+                    pixels += chr(row[i * 4 + 1])
+                    pixels += chr(row[i * 4 + 2])
+        else:
+            for row in data[2]:
+                pixels += row.tostring()
 
-    return (x, y, pixels)
+        return (x, y, pixels)
 
-def make_test_image():
-    width = 100 
-    height = 144
-    pixels = ""
-    for y in xrange(height):
-        row = ""
-        for x in xrange(width):
-            if x % 2 == 0:
-                row += chr(255) + chr(0) + chr(0)
-            else:
-                row += chr(0) + chr(0) + chr(255)
-        pixels += row
-
-    return (width, height, pixels)
-
-def rotate_image(width, height, pixels):
-
-    new_pixels = ""
-    for x in xrange(width):
-        line = ""
+    def make_test_image(self):
+        width = 100 
+        height = 144
+        pixels = ""
         for y in xrange(height):
-            line += pixels[y * width * 3 + (x * 3)]
-            line += pixels[y * width * 3 + (x * 3) + 1]
-            line += pixels[y * width * 3 + (x * 3) + 2]
+            row = ""
+            for x in xrange(width):
+                if x % 2 == 0:
+                    row += chr(255) + chr(0) + chr(0)
+                else:
+                    row += chr(0) + chr(0) + chr(255)
+            pixels += row
 
-        new_pixels += line
+        return (width, height, pixels)
 
-    return new_pixels
+    def rotate_image(self, width, height, pixels):
 
-def dump_image(pixels):
-    t_pixels = ""
-    for i, p in enumerate(pixels):
-        if i % 8 == 0:
-            print "\n%08X " % i,
-        print "%03d " % ord(p),
-    print
-    print "%d bytes" % len(pixels)
+        new_pixels = ""
+        for x in xrange(width):
+            line = ""
+            for y in xrange(height):
+                line += pixels[y * width * 3 + (x * 3)]
+                line += pixels[y * width * 3 + (x * 3) + 1]
+                line += pixels[y * width * 3 + (x * 3) + 2]
 
-if len(sys.argv) < 3:
-    print "Usage: driver.py <index> <png file>"
-    sys.exit(1)
+            new_pixels += line
 
-width, height, pixels = read_image(sys.argv[2]);
-print height
-if width < MIN_WIDTH:
-    print "Image is too narrow. Min %d pixels." % MIN_WIDTH
-    sys.exit(1)
-    
-if width > MAX_WIDTH:
-    print "Image is too wide. Max %d pixels." % MAX_WIDTH
-    sys.exit(1)
-
-if height < MIN_HEIGHT:
-    print "Image is too short. Min %d pixels." % MIN_HEIGHT
-    sys.exit(1)
-    
-if height > MAX_HEIGHT:
-    print "Image is too tall. Max %d pixels." % MAX_HEIGHT
-    sys.exit(1)
-
-pixels = rotate_image(width, height, pixels)
-
-driver = Driver("/dev/ttyAMA0", 0)
-print "open port"
-driver.open()
-print "send image"
-driver.send_image(int(sys.argv[1]), width, height, pixels)
-print "done"
-sys.exit(0)
+        return new_pixels

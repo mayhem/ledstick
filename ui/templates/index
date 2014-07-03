@@ -1,11 +1,12 @@
 {% extends 'layout' %}
 {% set active = "index" %}
 {% block body %}
+<link rel="stylesheet" href="/static/css/jquery-ui.min.css" />
 <div>
     <div id="bitmaps">
        {% for uuid in uuids %}
            <div class="bitmap">
-               <a href="/load/{{ uuid }}"><img class="bitmap" src="/static/bitmaps/{{ uuid }}.png"></img></a>
+               <a onclick="confirm_load('{{ uuid }}')"><img class="bitmap" src="/static/bitmaps/{{ uuid }}.png"></img></a>
            </div>
        {% else %}
            <div class="alert alert-info error">
@@ -20,7 +21,23 @@
         </div>
     {% endif %}
 </div>
+<div id="done-dialog" title="Image loaded!" style="display: none; text-align: center">
+<p>
+    Image loaded. \ø/ Have fun!
+</p>
+</div>
+<div id="confirm-dialog" title="Load image?" style="display: none; text-align: center">
+<p>
+    Are you sure you want to load this image? Please be polite to others.
+</p>
+</div>
+<div id="fail-dialog" title="Image load failed!" style="display: none; text-align: center">
+<p>
+    Failed to load image. Fuss. :(
+</p>
+</div>
 <script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
 <script type="text/javascript" src="/static/js/jquery-ias.min.js"></script>
 <script type="text/javascript">
 
@@ -35,5 +52,30 @@ $(document).ready(function() {
                src: '/static/images/spinner.gif'
    }));
 });
+
+function confirm_load(uuid)
+{
+    console.log("confirm " + uuid);
+    $("#confirm-dialog").dialog({ buttons: [ 
+               { text: "Yes", click: function() { $( this ).dialog( "close" ); send_image_to_stick(uuid) } },
+               { text: "No", click: function() { $( this ).dialog( "close" ); } } 
+    ] } );
+}
+
+function send_image_to_stick(uuid)
+{
+    console.log("send " + uuid);
+    $.ajax({
+            url: "/load/" + uuid,
+            success: function(html)
+            {
+                $("#done-dialog").dialog({ buttons: [ { text: "Yay!", click: function() { $( this ).dialog( "close" ); } } ] });
+            },
+            error: function(xmlhttp, textStatus, error)
+            {
+                $("#fail-dialog").dialog({ buttons: [ { text: "Bummer", click: function() { $( this ).dialog( "close" ); } } ] });
+            }
+    });
+}
 </script>
 {% endblock %}

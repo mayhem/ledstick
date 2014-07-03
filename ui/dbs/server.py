@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import BadRequest
 from stat import S_ISREG, ST_CTIME, ST_MODE
+from driver import Driver
 import subprocess
 import uuid
 
@@ -121,6 +122,15 @@ def crop_image(uuid, x, y, w, h):
     scale_and_crop_to_png(uuid, x, y, w, h)
     return redirect("/")
 
+@app.route("/load/<uuid>")
+def load(uuid):
+    filename = os.path.join(BITMAP_FOLDER, uuid + ".png")
+    width, height, pixels = app.driver.read_image(filename)
+    pixels = app.driver.rotate_image(width, height, pixels)
+    app.driver.send_image(0, width, height, pixels)
+
+    return ""
+
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():
     file = request.files['file']
@@ -130,6 +140,14 @@ def ws_upload():
         scale_image(filename, MAX_IMAGE_WIDTH)
         return ""
     raise BadRequest("Unsupported file type")
+
+app.driver = Driver("/dev/ttyAMA0")
+try:
+    app.driver.open()
+    print "opened ledstick"
+except IOError:
+    print "failed to open ledstick"
+    app.driver = None
 
 if __name__ == "__main__":
     if not os.path.exists(UPLOAD_FOLDER):
