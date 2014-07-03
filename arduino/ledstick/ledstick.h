@@ -16,9 +16,8 @@
 #define PACKET_OFF               0
 #define PACKET_SHOW_IMAGE_0      1
 #define PACKET_SHOW_IMAGE_1      2
-#define PACKET_LOAD_IMAGE_0      3
-#define PACKET_LOAD_IMAGE_1      4
-#define PACKET_IMAGE_BLOB        5
+#define PACKET_LOAD_IMAGE        3
+#define PACKET_IMAGE_BLOB        4
 
 #define BYTES_PER_BLOB           4096
 

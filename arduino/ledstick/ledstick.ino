@@ -7,6 +7,7 @@
 #include "bitmaps.h"
 
 #define DEVICE_HEIGHT 144
+#define UPLOAD_TIMEOUT 15 // in seconds
 
 // led stuff
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(DEVICE_HEIGHT, 2, NEO_GRB + NEO_KHZ800);
@@ -21,13 +22,15 @@ uint32_t target = 0;
 uint8_t  io_blob_mode = 0; 
 int io_total_bytes = 0;
 int io_header_count = 0;
-uint32_t io_timeout = 0;
+uint32_t io_timeout = 0, io_upload_timeout;
 int io_num_received = 0;
 const char io_header[HEADER_LEN] = { 0xF0, 0x0F, 0x0F, 0xF0 };
 uint8_t io_response = RECEIVE_NO_STATUS;
+bitmap_t *dest_bitmap = NULL;
 
 // bitmap related stuff -- note this also includes static bitmaps from bitmaps.h!
 const int num_bitmaps = 2;
+uint8_t bitmap_index = 0;
 bitmap_t bitmaps[num_bitmaps];
 
 // slicer
@@ -243,12 +246,15 @@ void serialEvent1()
     char               ch;
     static   packet_t  packet;
     static   uint16_t  len = 0, blob_offset = 0, total_len = 0;
-    static   bitmap_t *dest_bitmap = NULL;
+
     
     while (Serial1.available()) 
     {
         if (slicer_is_on())
+        {
+            io_timeout = ticks + 3;
             slicer_show_on(0);
+        }
             
         ch = Serial1.read(); 
         if (io_header_count < HEADER_LEN)
@@ -280,10 +286,11 @@ void serialEvent1()
             Serial1.write(io_response);
             if (io_response == RECEIVE_PACKET_COMPLETE)
             {
-                if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
+                if (packet.type == PACKET_LOAD_IMAGE)
                 {
-                     dest_bitmap = packet.type == PACKET_LOAD_IMAGE_0 ? &bitmaps[0] : &bitmaps[1];
+                     dest_bitmap = &bitmaps[bitmap_index];
                      io_blob_mode = 1;
+                     io_upload_timeout = ticks + UPLOAD_TIMEOUT;
                      len = 0;
                      io_header_count = 0;
                      blob_offset = 0;
@@ -298,10 +305,8 @@ void serialEvent1()
             if (io_response == RECEIVE_OK)
                 continue;
         
-            if (io_response == RECEIVE_PACKET_COMPLETE &&  
-               (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1))
-            { 
-                 
+            if (io_response == RECEIVE_PACKET_COMPLETE && packet.type == PACKET_LOAD_IMAGE)
+            {   
                  int total = dest_bitmap->w * dest_bitmap->h * 3;
                  int percent = 100 * (blob_offset + len) / total;
                  show_percent_complete(percent);
@@ -310,7 +315,7 @@ void serialEvent1()
             Serial1.write(io_response);
             if (io_response == RECEIVE_PACKET_COMPLETE)
             {           
-                if (packet.type == PACKET_LOAD_IMAGE_0 || packet.type == PACKET_LOAD_IMAGE_1)
+                if (packet.type == PACKET_LOAD_IMAGE)
                 {
                      total_len += len;
                      if (len == BYTES_PER_BLOB)
@@ -321,16 +326,12 @@ void serialEvent1()
                      }
                      else
                      {
-                         
                          dest_bitmap = NULL;
                          io_blob_mode = 0;
                          len = 0;
                          io_header_count = 0;
-
-                         if (packet.type == PACKET_LOAD_IMAGE_0)
-                             slicer_select_image(0, 0);
-                         else
-                             slicer_select_image(1, 0);
+                         slicer_select_image(bitmap_index, 0);   
+                         bitmap_index = (bitmap_index + 1) % num_bitmaps;    
                      }
                 } 
             }
@@ -457,12 +458,19 @@ void setup()
 void loop()
 {    
     t.update();
-    if (io_timeout && io_timeout < ticks)
+    if ((io_timeout && io_timeout < ticks) || (io_upload_timeout && io_upload_timeout < ticks))
     {
-        Serial.print("io_timeout");
+        Serial.println("io_timeout");
+        io_timeout = 0;
+        io_upload_timeout = 0;
         io_reset_receive();
         io_blob_mode = 0;
         io_response = RECEIVE_TIMEOUT;
+        if (dest_bitmap)
+        {
+            dest_bitmap->w = 0;
+            dest_bitmap = NULL;
+        }
         slicer_select_image(0, 1);
     }
   
