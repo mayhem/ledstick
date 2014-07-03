@@ -15,7 +15,7 @@ TEMPLATE_FOLDER = "../templates"
 UPLOAD_FOLDER = '../static/uploads'
 BITMAP_FOLDER = '../static/bitmaps'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
-PAGE_SIZE = 5
+PAGE_SIZE = 3
 MAX_IMAGE_WIDTH=800
 
 app = Flask(__name__,
@@ -76,7 +76,7 @@ def index():
     return render_template("index", uuids=uuids, next_page=index)
 
 @app.route("/bitmaps/<int:page>")
-def image(page):
+def bitmaps(page):
     uuids, have_more = get_uuids(page, BITMAP_FOLDER)
     if have_more:
         next_page = page + 1

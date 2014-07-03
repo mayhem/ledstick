@@ -4,20 +4,25 @@
 <link rel="stylesheet" href="/static/css/jquery-ui.min.css" />
 <div>
     <div id="bitmaps">
-       {% for uuid in uuids %}
-           <div class="bitmap">
-               <a onclick="confirm_load('{{ uuid }}')"><img class="bitmap" src="/static/bitmaps/{{ uuid }}.png"></img></a>
+       {% if uuids %}
+           <div class="bitmap-line">
+               {% for uuid in uuids %}
+                   <span class="bitmap">
+                       <a onclick="confirm_load('{{ uuid }}')"><img class="bitmap_image" src="/static/bitmaps/{{ uuid }}.png"></img></a>
+                   </span>
+               {% endfor %}
+               <span class="stretch"></span>
            </div>
        {% else %}
            <div class="alert alert-info error">
-               No bitmaps have been cropped. <a href="/images" class="alert-link">Get cropping!</a>
+               No bitmaps have been cropped. <a href="/bitmaps" class="alert-link">Get cropping!</a>
            </div>
-       {% endfor %}
+       {% endif %}
     </div>
 
     {% if next_page > 0 %}
         <div id="pagination">
-            <a href="/images/1" class="next">next</a>
+            <a href="/bitmaps/1" class="next">next</a>
         </div>
     {% endif %}
 </div>
