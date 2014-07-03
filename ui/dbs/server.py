@@ -3,7 +3,7 @@
 import os, sys, time, glob
 from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, InternalServerError
 from stat import S_ISREG, ST_CTIME, ST_MODE
 from driver import Driver
 import subprocess
@@ -127,9 +127,10 @@ def load(uuid):
     filename = os.path.join(BITMAP_FOLDER, uuid + ".png")
     width, height, pixels = app.driver.read_image(filename)
     pixels = app.driver.rotate_image(width, height, pixels)
-    app.driver.send_image(0, width, height, pixels)
+    if app.driver.send_image(width, height, pixels):
+        return ""
 
-    return ""
+    raise InternalServerError("Failed to load image.")
 
 @app.route("/ws/upload", methods=['POST'])
 def ws_upload():
