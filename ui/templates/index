@@ -26,19 +26,24 @@
         </div>
     {% endif %}
 </div>
-<div id="done-dialog" title="Image loaded!" style="display: none; text-align: center">
+<div id="done-dialog" title="Image loaded" style="display: none; text-align: center">
 <p>
     Image loaded. \ø/ Have fun!
 </p>
 </div>
-<div id="confirm-dialog" title="Load image?" style="display: none; text-align: center">
+<div id="confirm-dialog" title="Load image" style="display: none; text-align: center">
 <p>
     Are you sure you want to load this image? Please be polite to others.
 </p>
 </div>
-<div id="fail-dialog" title="Image load failed!" style="display: none; text-align: center">
+<div id="fail-dialog" title="Image load failed" style="display: none; text-align: center">
 <p>
     Failed to load image. Fuss. :(
+</p>
+</div>
+<div id="loading-dialog" title="Loading image" style="display: none; text-align: center">
+<p>
+    Loading image, hang on...
 </p>
 </div>
 <script type="text/javascript" src="/static/js/jquery-1.11.0.min.js"></script>
@@ -68,14 +73,17 @@ function confirm_load(uuid)
 
 function send_image_to_stick(uuid)
 {
+    $("#loading-dialog").dialog();
     $.ajax({
             url: "/load/" + uuid,
             success: function(html)
             {
+                $("#loading-dialog").dialog("close");
                 $("#done-dialog").dialog({ buttons: [ { text: "Yay!", click: function() { $( this ).dialog( "close" ); } } ] });
             },
             error: function(xmlhttp, textStatus, error)
             {
+                $("#loading-dialog").dialog("close");
                 $("#fail-dialog").dialog({ buttons: [ { text: "Bummer", click: function() { $( this ).dialog( "close" ); } } ] });
             }
     });
