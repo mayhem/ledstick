@@ -13,9 +13,23 @@ body {
     border-radius: 15px;
 }
 
-.bitmap {
+.bitmap-line {
+    text-align:       justify;
+    -ms-text-justify: distribute-all-lines;
+    text-justify:     distribute-all-lines;
+}
+
+.bitmap_image {
     margin-bottom: 10px;
-    border-radius: 5px;
+    border-radius: 10px;
+    width: 25%;
+}
+
+.stretch {
+    width: 100%;
+    display: inline-block;
+    font-size: 0;
+    line-height: 0;
 }
 
 .error {
