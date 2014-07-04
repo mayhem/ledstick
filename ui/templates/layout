@@ -17,6 +17,7 @@
        <a href="/" class="btn btn-lg btn-default {% if active == "index" %}btn-warning{% endif %}">home</a>
        <a href="/images" class="btn btn-lg btn-default {% if active == "images" %}btn-warning{% endif %}">images</a>
        <a href="/upload" class="btn btn-lg btn-default {% if active == "upload" %}btn-warning{% endif %}">upload</a>
+       <a href="/help" class="btn btn-lg btn-default {% if active == "help" %}btn-warning{% endif %}">help</a>
     </div>
     <div class="container-fluid">
        {% block body %}{% endblock %}
