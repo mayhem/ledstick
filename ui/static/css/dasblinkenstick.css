@@ -48,3 +48,20 @@ body {
 #crop {
     width: 100%;
 }
+
+#crop-button {
+    width: 100%;
+}
+
+.text {
+    font-family: verdana;
+    font-size: 15pt;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #FFF;
+}
+
+.help {
+    width: 100%;
+}

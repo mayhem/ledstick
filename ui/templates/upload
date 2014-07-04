@@ -2,6 +2,11 @@
 {% set active = "upload" %}
 {% block body %}
 <link rel="stylesheet" type="text/css" href="/static/css/dropzone.css">
+<div class="text">
+   To load an image onto Das Blinkenstick, press the Upload Image button below. Then select an image from your
+   device to upload it. Once the image is uploaded, go the the <a href="/images">images tab</a> to crop the
+   image. After the image is cropped, you can upload it to the stick from the <a href="/">home tab</a>.
+</div>
 <div style="text-align: center">
     <button id="upload" class="btn btn-warning btn-lg dropzone-btn">
     Upload an image

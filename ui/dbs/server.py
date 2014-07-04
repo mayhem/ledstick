@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os, sys, time, glob
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import BadRequest, InternalServerError
@@ -23,6 +25,10 @@ app = Flask(__name__,
             static_folder = STATIC_FOLDER,
             template_folder = TEMPLATE_FOLDER)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+handler = RotatingFileHandler("/tmp/ledstick.log")
+handler.setLevel(logging.WARNING)
+app.logger.addHandler(handler)
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -125,7 +131,7 @@ def crop_image(uuid, x, y, w, h):
     return redirect("/")
 
 @app.route("/help")
-def help(uuid):
+def help():
     return render_template("help")
 
 @app.route("/load/<uuid>")

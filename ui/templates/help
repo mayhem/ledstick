@@ -1,0 +1,10 @@
+{% extends 'layout' %}
+{% set active = "help" %}
+{% block body %}
+<div class="text">
+This video show a few ways to see the images on Das Blinkenstick:
+</div>
+<video class="help" controls>
+  <source src="/static/images/blinkenstick-help.mp4" type="video/mp4">
+</video>
+{% endblock %}

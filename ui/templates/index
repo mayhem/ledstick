@@ -2,6 +2,9 @@
 {% set active = "index" %}
 {% block body %}
 <link rel="stylesheet" href="/static/css/jquery-ui.min.css" />
+<div class="text">
+   Tap on an image to load it onto Das Blinkenstick:
+</div>
 <div>
     <div id="bitmaps">
        {% if uuids %}

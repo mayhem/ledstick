@@ -1,10 +1,13 @@
 {% extends 'layout' %}
 {% set active = "images" %}
 {% block body %}
+<div class="text">
+    To crop an image, tap and drag to select the area you want shown on Das Blinkenstick. Then click Crop Image.
+    <div style="text-align: center">
+       <a id="crop-button" class="btn btn-warning btn-lg" onclick="crop_image()"> Crop image </a>
+    </div>
+</div>
 <div style="text-align: center">
-    <a id="crop-button" class="btn btn-warning btn-lg" style="width: 400px" onclick="crop_image()">
-    Crop image
-    </a>
     <div style="margin-top: 1em" >
        <img id="crop" src="/static/uploads/{{ uuid }}.jpg">
     </div>
