@@ -7,7 +7,7 @@
 #include "bitmaps.h"
 
 #define DEVICE_HEIGHT 144
-#define UPLOAD_TIMEOUT 15 // in seconds
+#define UPLOAD_TIMEOUT 18 // in seconds
 
 // led stuff
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(DEVICE_HEIGHT, 2, NEO_GRB + NEO_KHZ800);
@@ -327,6 +327,7 @@ void serialEvent1()
                      else
                      {
                          dest_bitmap = NULL;
+                         io_upload_timeout = 0;
                          io_blob_mode = 0;
                          len = 0;
                          io_header_count = 0;
@@ -460,7 +461,10 @@ void loop()
     t.update();
     if ((io_timeout && io_timeout < ticks) || (io_upload_timeout && io_upload_timeout < ticks))
     {
-        Serial.println("io_timeout");
+        if (io_timeout && io_timeout < ticks)
+            Serial.println("io_timeout");
+        if (io_upload_timeout && io_upload_timeout < ticks)
+            Serial.println("io_upload_timeout");
         io_timeout = 0;
         io_upload_timeout = 0;
         io_reset_receive();
