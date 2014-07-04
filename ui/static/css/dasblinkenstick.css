@@ -13,7 +13,7 @@ body {
     border-radius: 15px;
 }
 
-.bitmap-span {
+.bitmap {
     text-align:       justify;
     -ms-text-justify: distribute-all-lines;
     text-justify:     distribute-all-lines;

@@ -20,7 +20,7 @@
     </div>
     {% if next_page > 0 %}
         <div id="pagination">
-            <a href="/bitmaps/{{ next_page }}" class="next">next</a>
+            <a href="/bitmap/{{ next_page }}" class="next">next</a>
         </div>
     {% endif %}
 </div>

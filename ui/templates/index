@@ -15,14 +15,14 @@
            </div>
        {% else %}
            <div class="alert alert-info error">
-               No bitmaps have been cropped. <a href="/bitmaps" class="alert-link">Get cropping!</a>
+               No bitmaps have been cropped. <a href="/images" class="alert-link">Get cropping!</a>
            </div>
        {% endif %}
     </div>
 
     {% if next_page > 0 %}
         <div id="pagination">
-            <a href="/bitmaps/1" class="next">next</a>
+            <a href="/bitmap/1" class="next">next</a>
         </div>
     {% endif %}
 </div>

@@ -22,6 +22,7 @@ app = Flask(__name__,
             static_url_path = STATIC_PATH,
             static_folder = STATIC_FOLDER,
             template_folder = TEMPLATE_FOLDER)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -76,7 +77,7 @@ def index():
         next_page = 0
     return render_template("index", uuids=uuids, next_page=index)
 
-@app.route("/bitmaps/<int:page>")
+@app.route("/bitmap/<int:page>")
 def bitmaps(page):
     uuids, have_more = get_uuids(page, BITMAP_FOLDER)
     if have_more:

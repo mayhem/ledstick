@@ -1,8 +1,9 @@
 Notes for the UI:
 
 Required modules:
-Flask
-pySerial
+flask
+pyserial
+pypng
 
 
 Required binaries:
