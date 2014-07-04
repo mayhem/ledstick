@@ -5,9 +5,9 @@
 <div>
     <div id="bitmaps">
        {% if uuids %}
-           <div class="bitmap-line">
+           <div class="bitmap">
                {% for uuid in uuids %}
-                   <span class="bitmap">
+                   <span class="bitmap-span">
                        <a onclick="confirm_load('{{ uuid }}')"><img class="bitmap_image" src="/static/bitmaps/{{ uuid }}.png"></img></a>
                    </span>
                {% endfor %}

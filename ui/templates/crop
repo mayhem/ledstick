@@ -20,44 +20,23 @@ $(document).ready(function()
 {
    $('#crop').Jcrop( { 
       aspectRatio: .694,
-      onSelect: set_coords
+      onSelect: set_coords,
+      trueSize: [{{ width }}, {{ height }}]
    });
    $("#crop-button").attr('disabled', 'disabled');
 });
 
 function set_coords(c)
 {
-    console.log("natural w " + {{ width }} + ", natural y" + {{ height }});
-    console.log("div w " + $("#crop").width() + "div h " + $("#crop").height());
-
-    if ({{ width }} < $("#crop").width())
-    {
-        x_ratio = {{ width }} / $("#crop").width();
-        y_ratio = {{ height }} / $("#crop").height();
-    }
-    else
-    {
-        x_ratio = $("#crop").width() / {{ width }};
-        y_ratio = $("#crop").height() / {{ height }};
-    }
-     
-    console.log("xr" + x_ratio);
-    console.log("yr" + y_ratio);
-    crop_x = (c.x * x_ratio).toFixed();
-    crop_y = (c.y * y_ratio).toFixed();
-    crop_w = (c.w * x_ratio).toFixed();
-    crop_h = (c.h * y_ratio).toFixed();
-    console.log(crop_x);
-    console.log(crop_y);
-    console.log(crop_w);
-    console.log(crop_h);
+    crop_x = (c.x).toFixed();
+    crop_y = (c.y).toFixed();
+    crop_w = (c.w).toFixed();
+    crop_h = (c.h).toFixed();
 
     if (crop_w > 10 && crop_h > 10)
         $("#crop-button").removeAttr('disabled');
     else
         $("#crop-button").attr('disabled', 'disabled');
-
-    alert("done");
 }
 
 function crop_image()

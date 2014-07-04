@@ -5,7 +5,7 @@
     <div id="images">
        {% for uuid in uuids %}
            <div class="image">
-               <a href="/crop/{{ uuid }}"><img class="image" src="/static/uploads/{{ uuid }}.jpg"></img></a>
+               <a href="/crop/{{ uuid }}"><img class="img" src="/static/uploads/{{ uuid }}.jpg"></img></a>
            </div>
        {% endfor %}
     </div>

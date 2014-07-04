@@ -36,6 +36,7 @@ def get_uuids(page, folder):
     file_list.sort(key=lambda x: x[1], reverse=True)
 
     uuids = [ os.path.basename(f[0]).split(".")[0] for f in file_list[page * PAGE_SIZE : page * PAGE_SIZE + PAGE_SIZE]]
+    print uuids
     return uuids, page < (len(file_list) // PAGE_SIZE) 
 
 def scale_image(filename, width):
