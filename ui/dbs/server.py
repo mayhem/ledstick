@@ -124,6 +124,10 @@ def crop_image(uuid, x, y, w, h):
     scale_and_crop_to_png(uuid, x, y, w, h)
     return redirect("/")
 
+@app.route("/help")
+def help(uuid):
+    return render_template("help")
+
 @app.route("/load/<uuid>")
 def load(uuid):
     filename = os.path.join(BITMAP_FOLDER, uuid + ".png")
