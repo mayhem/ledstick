@@ -10,11 +10,17 @@
        {% if uuids %}
            <div class="bitmap">
                {% for uuid in uuids %}
+                   {% if loop.index0 % 3 == 0 %}
+                       <div>
+                   {% endif %}
                    <span class="bitmap-span">
                        <a onclick="confirm_load('{{ uuid }}')"><img class="bitmap_image" src="/static/bitmaps/{{ uuid }}.png"></img></a>
                    </span>
+                   {% if loop.index0 % 3 == 2 %}
+                       <span class="stretch"></span>
+                       </div>
+                   {% endif %}
                {% endfor %}
-               <span class="stretch"></span>
            </div>
        {% else %}
            <div class="alert alert-info error">
@@ -25,7 +31,7 @@
 
     {% if next_page > 0 %}
         <div id="pagination">
-            <a href="/bitmap/1" class="next">next</a>
+            <a href="/bitmap/3" class="next">next</a>
         </div>
     {% endif %}
 </div>
@@ -59,7 +65,8 @@ $(document).ready(function() {
                   container:  '#bitmaps',
                   item:       '.bitmap',
                   pagination: '#pagination',
-                  next:       '.next'
+                  next:       '.next',
+                  negativeMargin : 250
    });
    ias.extension(new IASSpinnerExtension({
                src: '/static/images/spinner.gif'

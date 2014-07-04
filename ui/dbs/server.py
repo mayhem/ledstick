@@ -34,7 +34,10 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_uuids(page, folder):
+def get_uuids_by_page(page, folder):
+    return get_uuids(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE, folder)
+
+def get_uuids(start_index, end_index, folder):
     files = filter(os.path.isfile, glob.glob(os.path.join(folder, "*")))
     file_list = []
     for f in files:
@@ -42,9 +45,9 @@ def get_uuids(page, folder):
         file_list.append((os.path.basename(f),d))
     file_list.sort(key=lambda x: x[1], reverse=True)
 
-    uuids = [ os.path.basename(f[0]).split(".")[0] for f in file_list[page * PAGE_SIZE : page * PAGE_SIZE + PAGE_SIZE]]
+    uuids = [ os.path.basename(f[0]).split(".")[0] for f in file_list[start_index : end_index]]
     print uuids
-    return uuids, page < (len(file_list) // PAGE_SIZE) 
+    return uuids, end_index < len(file_list) 
 
 def scale_image(filename, width):
     tf = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()) + ".jpg")
@@ -76,7 +79,7 @@ def get_image_dims(uuid):
 
 @app.route("/")
 def index():
-    uuids, have_more = get_uuids(0, BITMAP_FOLDER)
+    uuids, have_more = get_uuids(0, 9, BITMAP_FOLDER)
     if have_more:
         next_page = 1
     else:
@@ -85,7 +88,7 @@ def index():
 
 @app.route("/bitmap/<int:page>")
 def bitmaps(page):
-    uuids, have_more = get_uuids(page, BITMAP_FOLDER)
+    uuids, have_more = get_uuids_by_page(page, BITMAP_FOLDER)
     if have_more:
         next_page = page + 1
     else:
@@ -103,7 +106,7 @@ def other():
 
 @app.route("/images")
 def images():
-    uuids, have_more = get_uuids(0, UPLOAD_FOLDER)
+    uuids, have_more = get_uuids_by_page(0, UPLOAD_FOLDER)
     if have_more:
         next_page = 1
     else:
@@ -112,7 +115,7 @@ def images():
 
 @app.route("/images/<int:page>")
 def image(page):
-    uuids, have_more = get_uuids(page, UPLOAD_FOLDER)
+    uuids, have_more = get_uuids_by_page(page, UPLOAD_FOLDER)
     if have_more:
         next_page = page + 1
     else:
