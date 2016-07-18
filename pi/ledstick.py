@@ -86,7 +86,7 @@ def main_loop(strip, images):
                         strip.setPixelColor(numpixels - row, color)
 
                     strip.show()
-                    sleep(.0002)
+                    sleep(.0004)
 
                 clear(strip)
                 if time() > timeout:
