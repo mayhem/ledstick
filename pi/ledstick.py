@@ -103,7 +103,7 @@ if len(sys.argv) < 2:
 strip = Adafruit_DotStar(numpixels, order='bgr')
 
 strip.begin()           
-strip.setBrightness(128) # Limit brightness to ~1/4 duty cycle
+strip.setBrightness(70) 
 startup(strip)
 
 images = load_files(sys.argv[1:])
